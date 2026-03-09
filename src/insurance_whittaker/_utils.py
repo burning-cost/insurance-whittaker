@@ -61,15 +61,13 @@ def penalty_matrix(n: int, order: int) -> NDArray[np.float64]:
 def penalty_banded(n: int, order: int) -> NDArray[np.float64]:
     """Return P = D^T D in upper banded storage format for solveh_banded.
 
-    ``scipy.linalg.solveh_banded`` uses upper form: row k of the returned
-    array holds the k-th superdiagonal (row 0 = main diagonal).  Shape is
-    (order + 1, n).
+    ``scipy.linalg.solveh_banded`` and ``scipy.linalg.cholesky_banded`` use
+    upper form: row k of the returned array holds the k-th superdiagonal
+    (row 0 = main diagonal), with the convention that ``ab[k, :n-k]`` holds
+    the k-th superdiagonal values.
 
-    The (i, j) element of D^T D satisfies::
-
-        (D'D)[i,j] = (-1)^|i-j| * C(2q, q-|i-j|)  for |i-j| <= q
-
-    This follows from the convolution of binomial coefficients.
+    This function computes P = D'D directly and extracts the banded form,
+    which correctly handles boundary elements.
 
     Parameters
     ----------
@@ -82,17 +80,15 @@ def penalty_banded(n: int, order: int) -> NDArray[np.float64]:
     -------
     NDArray of shape (order + 1, n) in upper banded storage.
     """
-    from math import comb
-
+    P = penalty_matrix(n, order)
     ab = np.zeros((order + 1, n))
     for k in range(order + 1):
-        coeff = (-1) ** k * comb(2 * order, order - k)
-        # k == 0 → main diagonal; k > 0 → k-th superdiagonal
+        # k-th superdiagonal: P[i, i+k] for i = 0, ..., n-k-1
         if k == 0:
-            ab[0, :] = coeff
+            ab[0, :] = np.diag(P, 0)
         else:
-            # superdiagonal k has n-k elements; ab[k, :n-k]
-            ab[k, : n - k] = coeff
+            diag_vals = np.diag(P, k)  # length n-k
+            ab[k, : n - k] = diag_vals
     return ab
 
 
@@ -122,77 +118,40 @@ def add_lambda_to_banded(
 
 
 # ---------------------------------------------------------------------------
-# Diagonal of the inverse via Cholesky factor
+# Diagonal of the inverse via column-wise solve
 # ---------------------------------------------------------------------------
 
 def diag_of_inverse_banded(
     ab: NDArray[np.float64],
     order: int,
 ) -> NDArray[np.float64]:
-    """Compute the diagonal of (W + lambda P)^{-1} from its banded Cholesky.
+    """Compute the diagonal of A^{-1} where A = (W + lambda P).
 
-    Uses the recursive back-substitution described in the WH R package
-    (``diag_V_compact_cpp``).  Given the banded Cholesky factor L (lower
-    triangular, computed from the upper banded form), the diagonal of
-    L^{-T} L^{-1} is computed column by column in O(n * order^2).
+    Solves n linear systems A x_i = e_i using the banded Cholesky factor,
+    extracting x_i[i] for each column.  This is O(n^2 * order) but for
+    typical insurance rating tables (n <= 200) it is fast.
 
     Parameters
     ----------
     ab:
-        Upper banded storage of (W + lambda P), shape (order+1, n).
+        Upper banded storage of A = (W + lambda P), shape (order+1, n).
     order:
         Difference order q (bandwidth = q+1 diagonals).
 
     Returns
     -------
-    NDArray of length n — the diagonal of the inverse matrix V.
+    NDArray of length n — the diagonal of A^{-1}.
     """
-    from scipy.linalg import cholesky_banded  # lower=False by default
+    from scipy.linalg import cholesky_banded, cho_solve_banded
 
-    # cholesky_banded returns the Cholesky factor in the same banded storage.
-    cb = cholesky_banded(ab, lower=False)
-    # cb is upper triangular banded: cb[k, j] = U[j-k, j] for row k, col j.
-    # We need diag(V) = diag((U^T U)^{-1}).
-    # Compute diagonal of U^{-1} and then diag(V) via recursive formula.
     n = ab.shape[1]
-    bw = order  # upper bandwidth
-
-    # Extract the actual U matrix entries we need via back-substitution.
-    # Store columns of U^{-1} only within the bandwidth.
-    # v[i] = diag of V = sum_k (U_inv[k,i])^2
-
+    cb = cholesky_banded(ab, lower=False)
     diag_v = np.zeros(n)
-    # Work from right to left.
-    # For column j of U^{-1}: U^{-1}[:,j] has nonzero entries only from
-    # max(0, j-bw) to j.
-    # Let x[i] = (U^{-1})[i, j] for i = j, j-1, ..., max(0,j-bw)
-
-    col_inv = np.zeros(bw + 1)  # col_inv[k] = U^{-1}[j-k, j]
-
-    for j in range(n - 1, -1, -1):
-        # Diagonal entry of U^{-1}: 1 / U[j,j] = 1 / cb[0, j]
-        ujj = cb[0, j]
-        col_inv[0] = 1.0 / ujj
-        # Off-diagonal: for k = 1, ..., min(bw, j)
-        limit = min(bw, j)
-        for k in range(1, limit + 1):
-            # U[j-k, j] is stored as cb[k, j]; note cb uses upper storage
-            # cb[k, j] = U[j-k, j]
-            s = 0.0
-            # sum over l = 0, ..., k-1
-            for l in range(k):
-                row = j - l  # column index in U (row of U^{-1} col j)
-                if row <= j:
-                    u_val = cb[k - l, j]  # U[j-k, j-l] — wait, need care
-                    # U[i, r] stored at cb[r-i, r]
-                    # We want U[j-k, j-l] — that is cb[(j-l)-(j-k), j-l] = cb[k-l, j-l]
-                    u_val = cb[k - l, j - l]
-                    s += u_val * col_inv[l]
-            col_inv[k] = -s / ujj
-        # contribution to diag_v[j-k] for k = 0,...,limit
-        for k in range(limit + 1):
-            diag_v[j - k] += col_inv[k] ** 2
-
+    for i in range(n):
+        e_i = np.zeros(n)
+        e_i[i] = 1.0
+        v_i = cho_solve_banded((cb, False), e_i)
+        diag_v[i] = v_i[i]
     return diag_v
 
 
@@ -217,7 +176,7 @@ def to_numpy_1d(x: ArrayLike, name: str = "array") -> NDArray[np.float64]:
     Raises
     ------
     ValueError
-        If the result is not 1-D or contains NaN/Inf.
+        If the result is not 1-D.
     """
     try:
         import polars as pl
