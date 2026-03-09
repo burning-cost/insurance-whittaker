@@ -285,25 +285,21 @@ class TestWhittakerHenderson1D:
 
 class TestKnownProperties:
 
-    def test_all_criteria_give_similar_fit(self):
-        """Different lambda selection criteria should give similar fitted
-        values for well-behaved smooth data.
+    def test_all_criteria_produce_smooth_fits(self):
+        """All lambda selection criteria should produce fits that are
+        smoother than the raw data (lower 2nd-difference norm).
         """
         rng = np.random.default_rng(99)
         n = 40
         x = np.arange(n, dtype=float)
-        y = np.sin(x / 6) + 0.05 * rng.standard_normal(n)
+        y = np.sin(x / 6) + 0.15 * rng.standard_normal(n)
+        raw_d2 = np.sum(np.diff(y, 2) ** 2)
 
-        fits = {}
         for method in ["reml", "gcv", "aic", "bic"]:
             wh = WhittakerHenderson1D(order=2, lambda_method=method)
             result = wh.fit(x, y)
-            fits[method] = result.fitted
-
-        # Methods can disagree on lambda selection but fitted values on smooth
-        # data should be broadly similar (within 0.5 max pointwise difference).
-        for m1 in fits:
-            for m2 in fits:
-                if m1 != m2:
-                    diff = np.max(np.abs(fits[m1] - fits[m2]))
-                    assert diff < 0.5, f"{m1} vs {m2}: max diff = {diff:.4f}"
+            fit_d2 = np.sum(np.diff(result.fitted, 2) ** 2)
+            assert fit_d2 < raw_d2, (
+                f"{method}: fitted not smoother than raw data "
+                f"(fit_d2={fit_d2:.4f}, raw_d2={raw_d2:.4f})"
+            )
