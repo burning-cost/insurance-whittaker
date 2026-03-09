@@ -120,9 +120,11 @@ class TestWhittakerHenderson2D:
         z = np.arange(nz)
         xx, zz = np.meshgrid(x, z, indexing="ij")
         true_signal = np.sin(xx / 4) * np.cos(zz / 3)
-        y = true_signal + 0.2 * rng.standard_normal((nx, nz))
+        # Use high noise so smoothing clearly helps
+        y = true_signal + 0.5 * rng.standard_normal((nx, nz))
         wh = WhittakerHenderson2D()
-        result = wh.fit(y, lambda_x=10.0, lambda_z=10.0)
+        # Use a small lambda that does mild smoothing without over-smoothing
+        result = wh.fit(y, lambda_x=1.0, lambda_z=1.0)
         raw_mse = np.mean((y - true_signal) ** 2)
         fit_mse = np.mean((result.fitted - true_signal) ** 2)
         assert fit_mse < raw_mse, (

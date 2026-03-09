@@ -126,7 +126,7 @@ class TestCriterionValues:
         y = rng.standard_normal(n)
         w = np.ones(n)
         ab_P = penalty_banded(n, 2)
-        log_det_P = _log_det_P_nz_cached(ab_P, n, 2)
+        log_det_P = _log_det_P_nz_cached(n, 2)  # new signature: (n, order)
         val = reml_criterion(np.log(100.0), ab_P, w, y, 2, log_det_P)
         assert np.isfinite(val)
 
@@ -152,7 +152,7 @@ class TestCriterionValues:
         w = np.ones(n)
         ab_P = penalty_banded(n, 2)
         if "log_det_P_nz" in kw:
-            kw["log_det_P_nz"] = _log_det_P_nz_cached(ab_P, n, 2)
+            kw["log_det_P_nz"] = _log_det_P_nz_cached(n, 2)  # new signature
         # Call with log_lam, ab_P, w, y, order, log_det_P_nz
         val = fn(np.log(50.0), ab_P, w, y, 2, kw.get("log_det_P_nz", 0.0))
         assert np.isfinite(val), f"{fn.__name__} returned {val}"
