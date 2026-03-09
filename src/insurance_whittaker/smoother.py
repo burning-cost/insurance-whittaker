@@ -9,7 +9,7 @@ The solution is::
 
     theta_hat = (W + lambda D'D)^{-1} W y
 
-Solved via banded Cholesky (scipy.linalg.solveh_banded) in O(n * q) time.
+Solved via Cholesky factorisation (scipy.linalg.cho_factor / cho_solve).
 The hat matrix diagonal is computed for Bayesian credible intervals.
 
 Reference: Biessy (2026), ASTIN Bulletin.  arXiv:2306.06932.
@@ -17,21 +17,26 @@ Reference: Biessy (2026), ASTIN Bulletin.  arXiv:2306.06932.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from scipy.linalg import cho_solve_banded, cholesky_banded
+from scipy.linalg import cho_factor, cho_solve
 
 from ._utils import (
-    add_lambda_to_banded,
-    diag_of_inverse_banded,
-    penalty_banded,
+    penalty_matrix,
     to_numpy_1d,
     validate_inputs,
 )
-from .selection import select_lambda, _solve_banded_system, _edf_from_hat
+from .selection import (
+    select_lambda,
+    _solve_system,
+    _diag_of_inverse,
+    CRITERIA,
+    _log_det_P_nz_cached,
+    penalty_banded,
+)
 
 LambdaMethod = Literal["reml", "gcv", "aic", "bic"]
 
@@ -113,8 +118,7 @@ class WHResult1D:
         ax:
             Matplotlib Axes object.  If None, a new figure is created.
         title:
-            Plot title.  Defaults to 'Whittaker-Henderson Smooth
-            (lambda={lambda_:.1f}, edf={edf:.1f})'.
+            Plot title.
 
         Returns
         -------
@@ -159,12 +163,10 @@ class WhittakerHenderson1D:
     >>> import numpy as np
     >>> from insurance_whittaker import WhittakerHenderson1D
     >>> ages = np.arange(17, 80)
-    >>> loss_ratios = 1.0 / (1.0 + np.exp(-(ages - 40) / 10)) + 0.05 * np.random.randn(len(ages))
-    >>> exposures = np.random.exponential(100, len(ages))
+    >>> loss_ratios = 0.6 + 0.2 * np.exp(-(ages - 25) ** 2 / 200)
+    >>> exposures = np.ones(len(ages)) * 100
     >>> wh = WhittakerHenderson1D(order=2, lambda_method='reml')
     >>> result = wh.fit(ages, loss_ratios, weights=exposures)
-    >>> print(result)
-    WHResult1D(n=63, order=2, lambda_=..., edf=..., criterion='reml')
     """
 
     def __init__(
@@ -203,8 +205,6 @@ class WhittakerHenderson1D:
         Returns
         -------
         WHResult1D
-            Dataclass holding the smoothed values, credible intervals, and
-            diagnostic statistics.
 
         Raises
         ------
@@ -221,8 +221,9 @@ class WhittakerHenderson1D:
                 f"Need at least {self.order + 1} observations for order={self.order}"
             )
 
-        # Build penalty in banded form
+        # Build penalty in banded descriptor form (used only for select_lambda)
         ab_P = penalty_banded(n, self.order)
+        P_full = penalty_matrix(n, self.order)
 
         # Select or use supplied lambda
         if lambda_ is None:
@@ -232,26 +233,23 @@ class WhittakerHenderson1D:
                 raise ValueError("lambda_ must be positive")
             lam = float(lambda_)
 
-        # Solve the banded system
+        # Solve the system
         Wy = w_arr * y_arr
-        theta, cb, _ = _solve_banded_system(ab_P, w_arr, Wy, lam)
+        theta, cf, _ = _solve_system(P_full, w_arr, Wy, lam)
 
-        # Diagonal of V = (W + lam*P)^{-1} for credible intervals
-        ab = add_lambda_to_banded(ab_P, w_arr, lam)
-        diag_v = diag_of_inverse_banded(ab, self.order)
+        # Diagonal of V = A^{-1} for credible intervals
+        diag_v = _diag_of_inverse(cf, n)
         std_fitted = np.sqrt(np.maximum(diag_v, 0.0))
-
         ci_lower = theta - 1.96 * std_fitted
         ci_upper = theta + 1.96 * std_fitted
 
-        # EDF = trace((W + lam*P)^{-1} W)
+        # EDF = trace((W + lam*P)^{-1} W) = sum_i W_i * V_ii
         edf = float(np.sum(w_arr * diag_v))
 
         # Criterion value at selected lambda
-        from .selection import CRITERIA, _log_det_P_nz_cached
         log_det_P_nz = 0.0
         if self.lambda_method == "reml":
-            log_det_P_nz = _log_det_P_nz_cached(ab_P, n, self.order)
+            log_det_P_nz = _log_det_P_nz_cached(n, self.order)
         crit_fn = CRITERIA[self.lambda_method]
         crit_val = float(crit_fn(
             np.log(lam), ab_P, w_arr, y_arr, self.order, log_det_P_nz

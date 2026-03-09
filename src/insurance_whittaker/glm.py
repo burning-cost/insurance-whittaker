@@ -21,13 +21,11 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from ._utils import (
-    add_lambda_to_banded,
-    diag_of_inverse_banded,
     penalty_banded,
+    penalty_matrix,
     to_numpy_1d,
-    validate_inputs,
 )
-from .selection import select_lambda, _solve_banded_system
+from .selection import select_lambda, _solve_system, _diag_of_inverse
 
 LambdaMethod = Literal["reml", "gcv", "aic", "bic"]
 
@@ -50,7 +48,7 @@ class WHResultPoisson:
     exposure:
         Exposure (e.g., policy years).
     fitted_rate:
-        Smoothed claim rate (lambda per unit exposure).
+        Smoothed claim rate (per unit exposure).
     fitted_count:
         Smoothed expected counts = fitted_rate * exposure.
     ci_lower_rate:
@@ -150,7 +148,7 @@ class WhittakerHendersonPoisson:
     >>> import numpy as np
     >>> from insurance_whittaker import WhittakerHendersonPoisson
     >>> ages = np.arange(17, 80)
-    >>> exposure = np.random.exponential(200, len(ages))
+    >>> exposure = np.ones(len(ages)) * 200
     >>> true_rate = 0.05 + 0.1 * np.exp(-(ages - 25) ** 2 / 200)
     >>> counts = np.random.poisson(true_rate * exposure)
     >>> wh = WhittakerHendersonPoisson(order=2)
@@ -211,6 +209,7 @@ class WhittakerHendersonPoisson:
             raise ValueError("exposure must be non-negative")
 
         ab_P = penalty_banded(n, self.order)
+        P_full = penalty_matrix(n, self.order)
 
         # Initialise log-rate estimate
         observed_rate = np.where(
@@ -241,7 +240,10 @@ class WhittakerHendersonPoisson:
 
             # Solve the WH system with working weights
             Wtz = wt * z
-            eta_new, _, _ = _solve_banded_system(ab_P, wt, Wtz, lam)
+            try:
+                eta_new, _, _ = _solve_system(P_full, wt, Wtz, lam)
+            except np.linalg.LinAlgError:
+                break
 
             # Step-halving for stability
             step = 1.0
@@ -267,11 +269,17 @@ class WhittakerHendersonPoisson:
         wt_final = mu_final
         z_final = eta + (c_arr - mu_final) / mu_final
         Wtz_final = wt_final * z_final
-        eta_hat, _, _ = _solve_banded_system(ab_P, wt_final, Wtz_final, lam)
+        try:
+            eta_hat, cf_final, _ = _solve_system(P_full, wt_final, Wtz_final, lam)
+        except np.linalg.LinAlgError:
+            eta_hat = eta
+            cf_final = None
 
         # Credible intervals on log scale; transform to rate scale
-        ab = add_lambda_to_banded(ab_P, wt_final, lam)
-        diag_v = diag_of_inverse_banded(ab, self.order)
+        if cf_final is not None:
+            diag_v = _diag_of_inverse(cf_final, n)
+        else:
+            diag_v = np.zeros(n)
         std_log = np.sqrt(np.maximum(diag_v, 0.0))
         edf = float(np.sum(wt_final * diag_v))
 

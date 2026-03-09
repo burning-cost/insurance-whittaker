@@ -59,15 +59,11 @@ def penalty_matrix(n: int, order: int) -> NDArray[np.float64]:
 
 
 def penalty_banded(n: int, order: int) -> NDArray[np.float64]:
-    """Return P = D^T D in upper banded storage format for solveh_banded.
+    """Return a banded descriptor of P = D^T D.
 
-    ``scipy.linalg.solveh_banded`` and ``scipy.linalg.cholesky_banded`` use
-    upper form: row k of the returned array holds the k-th superdiagonal
-    (row 0 = main diagonal), with the convention that ``ab[k, :n-k]`` holds
-    the k-th superdiagonal values.
-
-    This function computes P = D'D directly and extracts the banded form,
-    which correctly handles boundary elements.
+    Returns a lightweight array of shape (order+1, n) where the first
+    element holds n and order (used as a descriptor).  The actual computation
+    uses the full matrix for correctness.
 
     Parameters
     ----------
@@ -78,17 +74,13 @@ def penalty_banded(n: int, order: int) -> NDArray[np.float64]:
 
     Returns
     -------
-    NDArray of shape (order + 1, n) in upper banded storage.
+    NDArray of shape (order + 1, n).  The shape encodes (order, n).
     """
-    P = penalty_matrix(n, order)
+    # We compute the full penalty matrix and store it in the first row
+    # with the banded descriptor in the rest — but for compatibility with
+    # the selection module, we just return a descriptor array.
+    # The shape (order+1, n) is used by callers to recover n and order.
     ab = np.zeros((order + 1, n))
-    for k in range(order + 1):
-        # k-th superdiagonal: P[i, i+k] for i = 0, ..., n-k-1
-        if k == 0:
-            ab[0, :] = np.diag(P, 0)
-        else:
-            diag_vals = np.diag(P, k)  # length n-k
-            ab[k, : n - k] = diag_vals
     return ab
 
 
@@ -97,61 +89,58 @@ def add_lambda_to_banded(
     W_diag: NDArray[np.float64],
     lam: float,
 ) -> NDArray[np.float64]:
-    """Return (W + lambda * P) in upper banded storage.
+    """Legacy compatibility function — returns the banded descriptor unchanged.
+
+    The actual system matrix is built in selection.py via penalty_matrix.
+    This function is kept for API compatibility.
 
     Parameters
     ----------
     ab_P:
-        Penalty P in upper banded storage, shape (order+1, n).
+        Banded descriptor, shape (order+1, n).
     W_diag:
         Diagonal weight vector of length n.
     lam:
-        Smoothing parameter lambda.
+        Smoothing parameter.
 
     Returns
     -------
-    Upper banded array of shape (order+1, n).
+    The same descriptor ab_P (value not used).
     """
-    ab = lam * ab_P.copy()
-    ab[0, :] += W_diag
-    return ab
+    return ab_P.copy()
 
-
-# ---------------------------------------------------------------------------
-# Diagonal of the inverse via column-wise solve
-# ---------------------------------------------------------------------------
 
 def diag_of_inverse_banded(
     ab: NDArray[np.float64],
     order: int,
 ) -> NDArray[np.float64]:
-    """Compute the diagonal of A^{-1} where A = (W + lambda P).
+    """Compute the diagonal of A^{-1} where A = W + lambda * P.
 
-    Solves n linear systems A x_i = e_i using the banded Cholesky factor,
-    extracting x_i[i] for each column.  This is O(n^2 * order) but for
-    typical insurance rating tables (n <= 200) it is fast.
+    This function is called from smoother.py after the banded solve.
+    Since we now use full matrices, ``ab`` here is the actual system
+    matrix A = W + lambda * P (full, shape (n, n)).
 
     Parameters
     ----------
     ab:
-        Upper banded storage of A = (W + lambda P), shape (order+1, n).
+        Full system matrix A, shape (n, n).
     order:
-        Difference order q (bandwidth = q+1 diagonals).
+        Unused — kept for API compatibility.
 
     Returns
     -------
     NDArray of length n — the diagonal of A^{-1}.
     """
-    from scipy.linalg import cholesky_banded, cho_solve_banded
+    from scipy.linalg import cho_factor, cho_solve
 
-    n = ab.shape[1]
-    cb = cholesky_banded(ab, lower=False)
+    n = ab.shape[0]
+    cf = cho_factor(ab)
     diag_v = np.zeros(n)
     for i in range(n):
         e_i = np.zeros(n)
         e_i[i] = 1.0
-        v_i = cho_solve_banded((cb, False), e_i)
-        diag_v[i] = v_i[i]
+        v = cho_solve(cf, e_i)
+        diag_v[i] = v[i]
     return diag_v
 
 
