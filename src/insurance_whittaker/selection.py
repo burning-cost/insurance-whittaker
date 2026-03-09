@@ -377,7 +377,7 @@ def select_lambda_2d(
             theta, log_det = _solve_2d_system(
                 ab_Px, ab_Pz, nx, nz, W_vec, y_vec, lx, lz, order_x, order_z
             )
-        except Exception:
+        except (np.linalg.LinAlgError, ValueError, FloatingPointError):
             return 1e30
         resid = y_vec - theta
         dev = float(np.sum(W_vec * resid ** 2))
