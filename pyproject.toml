@@ -30,8 +30,8 @@ plot = ["matplotlib>=3.7"]
 dev = ["pytest>=7.0", "pytest-cov"]
 
 [project.urls]
-Homepage = "https://github.com/burningcost/insurance-whittaker"
-Repository = "https://github.com/burningcost/insurance-whittaker"
+Homepage = "https://github.com/burning-cost/insurance-whittaker"
+Repository = "https://github.com/burning-cost/insurance-whittaker"
 
 [build-system]
 requires = ["hatchling"]
