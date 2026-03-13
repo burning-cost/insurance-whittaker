@@ -69,10 +69,23 @@ pip install insurance-whittaker[plot]
 import numpy as np
 from insurance_whittaker import WhittakerHenderson1D
 
-# Age bands 17-79, with loss ratios and exposures
+rng = np.random.default_rng(42)
+
+# 63 driver age bands, 17-79
 ages = np.arange(17, 80)
-loss_ratios = ...   # observed loss ratios by age
-exposures = ...     # policy years by age
+
+# True underlying loss ratio: high at young ages, declines to mid-30s, then flat
+true_lr = 0.35 * np.exp(-0.05 * (ages - 17)) + 0.06
+
+# Exposures: thin at extremes, heavy in the middle (realistic UK motor)
+exposures = np.round(
+    500 * np.exp(-0.5 * ((ages - 40) / 18) ** 2) + 50
+).astype(float)
+
+# Observed loss ratios: add Poisson-driven noise (variance ~ 1/exposure)
+noise_sd = np.sqrt(true_lr * (1 - true_lr) / exposures)
+loss_ratios = true_lr + rng.normal(0, noise_sd)
+loss_ratios = np.clip(loss_ratios, 0.01, 1.0)
 
 wh = WhittakerHenderson1D(order=2, lambda_method='reml')
 result = wh.fit(ages, loss_ratios, weights=exposures)
@@ -87,16 +100,42 @@ result.edf           # effective degrees of freedom (e.g., 5.2)
 # Polars output
 df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper
 
-# Plot
+# Plot (requires insurance-whittaker[plot])
 result.plot()
 ```
 
 ### 2-D: smoothing an age x vehicle group table
 
 ```python
+import numpy as np
 from insurance_whittaker import WhittakerHenderson2D
 
-# y is a (n_age x n_veh) NumPy array or Polars DataFrame
+rng = np.random.default_rng(42)
+
+# 10 age bands x 5 vehicle groups
+n_age, n_veh = 10, 5
+age_midpoints = np.linspace(20, 65, n_age)
+veh_groups = np.arange(1, n_veh + 1)  # 1=small hatchback, 5=prestige/sports
+
+# True signal: age effect (U-shaped) + vehicle effect (linear)
+age_effect = 0.08 + 0.15 * np.exp(-0.04 * (age_midpoints - 20))
+veh_effect = 0.03 * (veh_groups - 1)
+true_lr = age_effect[:, None] + veh_effect[None, :]  # (10, 5)
+
+# Exposure grid: total 20,000 policies distributed unevenly
+base_exp = np.outer(
+    np.array([80, 200, 350, 450, 500, 480, 420, 300, 180, 90], dtype=float),
+    np.array([300, 250, 200, 150, 100], dtype=float),
+)
+# Normalise to realistic policy counts per cell
+exposures = base_exp / base_exp.sum() * 20_000
+
+# Add noise: variance ~ true_lr / exposure
+noise_sd = np.sqrt(true_lr / exposures)
+y = true_lr + rng.normal(0, noise_sd)
+y = np.clip(y, 0.01, None)
+
+# y is a (n_age x n_veh) NumPy array
 wh = WhittakerHenderson2D(order_x=2, order_z=2)
 result = wh.fit(y, weights=exposures)
 
@@ -110,7 +149,23 @@ df = result.to_polars()  # long format: x, z, fitted, ci_lower, ci_upper
 ### Poisson: smoothing claim frequencies
 
 ```python
+import numpy as np
 from insurance_whittaker import WhittakerHendersonPoisson
+
+rng = np.random.default_rng(42)
+
+ages = np.arange(17, 80)
+
+# True claim rate (per policy year): high young, declines with age
+true_rate = 0.28 * np.exp(-0.04 * (ages - 17)) + 0.04
+
+# Policy years by age band
+policy_years = np.round(
+    800 * np.exp(-0.5 * ((ages - 38) / 16) ** 2) + 80
+).astype(float)
+
+# Observed claim counts: Poisson draws
+claim_counts = rng.poisson(true_rate * policy_years).astype(float)
 
 # Claim counts and exposure, not derived rates
 wh = WhittakerHendersonPoisson(order=2)
