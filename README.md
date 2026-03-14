@@ -1,5 +1,10 @@
 # insurance-whittaker
 
+[![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
+[![Python](https://img.shields.io/pypi/pyversions/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)]()
+[![License](https://img.shields.io/badge/license-BSD--3-blue)]()
+
 Whittaker-Henderson smoothing for insurance pricing tables.
 
 ## The problem
