@@ -209,6 +209,14 @@ Benchmarked against manual quintile and decile banding on a synthetic UK motor d
 
 See `notebooks/whittaker_demo.py` for a full worked example and `notebooks/benchmark_whittaker.py` for the head-to-head comparison against manual banding.
 
+
+## Related Libraries
+
+| Library | What it does |
+|---------|-------------|
+| [insurance-glm-tools](https://github.com/burning-cost/insurance-glm-tools) | GLM tools including factor smoothing — Whittaker smoothing produces the graduated rates that GLM offsets consume |
+| [insurance-trend](https://github.com/burning-cost/insurance-trend) | Forward trend projection with structural break detection — complement to this library for the trend-fitting stage |
+
 ## Licence
 
 MIT
