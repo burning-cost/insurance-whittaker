@@ -205,6 +205,11 @@ Benchmarked against manual quintile and decile banding on a synthetic UK motor d
 - **Lambda selection methods**: REML, GCV, AIC, and BIC produce qualitatively similar results on typical actuarial datasets. REML is preferred because it has a unique, well-defined maximum — GCV occasionally selects extreme lambdas on pathological data.
 - **Limitation**: W-H is a smoother, not a shape constraint. It does not enforce monotonicity. If your experience data has a genuine non-monotone feature (e.g., a real dip at age 40), W-H will preserve it. If that feature is noise, increase lambda — REML usually handles this automatically.
 
+
+## Databricks Notebook
+
+A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/insurance_whittaker_demo.py).
+
 ## Notebooks
 
 See `notebooks/whittaker_demo.py` for a full worked example and `notebooks/benchmark_whittaker.py` for the head-to-head comparison against manual banding.
