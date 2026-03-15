@@ -187,12 +187,17 @@ def gcv_criterion(
 ) -> float:
     """Evaluate the GCV criterion at log(lambda).
 
-    GCV = n * dev / (n - edf)^2
+    GCV = W_sum * dev / (W_sum - edf)^2
+
+    where W_sum = sum(w_i) is the total weight (exposure).  Using the sum
+    of weights rather than the observation count n is correct for the
+    weighted GCV criterion; the two coincide only when all weights are equal.
     """
     lam = np.exp(log_lam)
     n = len(y)
     P_full = penalty_matrix(n, order)
     Wy = W_diag * y
+    W_sum = float(np.sum(W_diag))
     try:
         theta, cf, _ = _solve_system(P_full, W_diag, Wy, lam)
     except np.linalg.LinAlgError:
@@ -201,10 +206,10 @@ def gcv_criterion(
     edf = float(np.sum(W_diag * diag_v))
     resid = y - theta
     dev = float(np.sum(W_diag * resid ** 2))
-    denom = (n - edf) ** 2
+    denom = (W_sum - edf) ** 2
     if denom < 1e-10:
         return 1e30
-    return n * dev / denom
+    return W_sum * dev / denom
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +351,22 @@ def select_lambda_2d(
     order_z: int,
     method: str = "reml",
 ) -> tuple[float, float]:
-    """Select lambda_x and lambda_z jointly for 2D smoothing via Nelder-Mead.
+    """Select lambda_x and lambda_z jointly for 2D smoothing via L-BFGS-B.
+
+    Minimises the penalised log-likelihood (a REML-style criterion) over
+    log(lambda_x) and log(lambda_z) jointly.
+
+    The objective is:
+
+        (dev + pen_x + pen_z) / 2 + log|A| / 2
+            - rank_x * log(lam_x) / 2
+            - rank_z * log(lam_z) / 2
+            - log_det_Px_nz / 2
+            - log_det_Pz_nz / 2
+
+    where rank_x = nx - order_x and rank_z = nz - order_z are the ranks of
+    the respective 1-D penalty matrices, matching the Biessy (2026) REML
+    formulation applied to the separable 2-D penalty.
 
     Parameters
     ----------
@@ -363,13 +383,30 @@ def select_lambda_2d(
     order_x, order_z:
         Difference orders.
     method:
-        Currently only 'reml' is supported for 2D.
+        Only 'reml' is supported for 2D.  Passing any other value raises
+        ValueError.
 
     Returns
     -------
     (lambda_x, lambda_z) tuple.
+
+    Raises
+    ------
+    ValueError
+        If method is not 'reml'.
     """
+    if method != "reml":
+        raise ValueError(
+            f"2D lambda selection only supports method='reml'; got '{method}'. "
+            "GCV for 2D is not yet implemented."
+        )
+
     from ._smoother2d import _solve_2d_system
+
+    rank_x = nx - order_x
+    rank_z = nz - order_z
+    log_det_Px_nz = _log_det_P_nz_cached(nx, order_x)
+    log_det_Pz_nz = _log_det_P_nz_cached(nz, order_z)
 
     def neg_reml_2d(log_lams: NDArray) -> float:
         lx, lz = np.exp(log_lams[0]), np.exp(log_lams[1])
@@ -389,7 +426,18 @@ def select_lambda_2d(
         for _ in range(order_z):
             Dqz_theta = np.diff(Dqz_theta, axis=1)
         pen_z = lz * float(np.sum(Dqz_theta ** 2))
-        return (dev + pen_x + pen_z) / 2.0 + log_det / 2.0
+
+        # REML correction terms: -rank * log(lam) / 2 and -log|P_nz| / 2
+        # for each penalty dimension.  These are the terms that distinguish
+        # REML from penalised likelihood and correct the bias toward
+        # over-smoothing.
+        reml_correction = (
+            -rank_x * log_lams[0] / 2.0
+            - rank_z * log_lams[1] / 2.0
+            - log_det_Px_nz / 2.0
+            - log_det_Pz_nz / 2.0
+        )
+        return (dev + pen_x + pen_z) / 2.0 + log_det / 2.0 + reml_correction
 
     log_lam_bounds = (-6 * np.log(10), 10 * np.log(10))
     x0 = np.array([3.0, 3.0])  # start at lambda ~ 20

@@ -1,6 +1,6 @@
 [project]
 name = "insurance-whittaker"
-version = "0.1.0"
+version = "0.1.1"
 description = "Whittaker-Henderson smoothing for insurance pricing tables"
 readme = "README.md"
 authors = [

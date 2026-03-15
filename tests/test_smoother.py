@@ -146,20 +146,35 @@ class TestWhittakerHenderson1D:
         fit_d2 = np.sum(np.diff(result.fitted, 2) ** 2)
         assert fit_d2 < raw_d2
 
-    def test_ci_contains_truth(self):
-        """Most true signal values should fall within the 95% CI."""
+    def test_ci_wider_with_more_noise(self):
+        """Credible intervals must widen when residual noise increases.
+
+        The posterior CI is sigma_hat * sqrt(diag(A^{-1})).  With the same
+        lambda and a noise level 10x larger, the CI widths should also be
+        roughly 10x larger (since sigma_hat scales with noise).
+        """
         rng = np.random.default_rng(1)
         n = 50
         x = np.arange(n, dtype=float)
         true_signal = np.sin(x / 8) * 0.5 + 1.0
-        y = true_signal + 0.1 * rng.standard_normal(n)
+
+        # Two noise levels with the same lambda (to isolate the sigma^2 effect)
+        y_low = true_signal + 0.1 * rng.standard_normal(n)
+        y_high = true_signal + 1.0 * rng.standard_normal(n)
+
         wh = self._make_smoother()
-        result = wh.fit(x, y)
-        inside = np.mean(
-            (true_signal >= result.ci_lower) & (true_signal <= result.ci_upper)
+        r_low = wh.fit(x, y_low, lambda_=50.0)
+        r_high = wh.fit(x, y_high, lambda_=50.0)
+
+        mean_width_low = float(np.mean(r_low.ci_upper - r_low.ci_lower))
+        mean_width_high = float(np.mean(r_high.ci_upper - r_high.ci_lower))
+
+        # High-noise CIs should be substantially wider
+        assert mean_width_high > mean_width_low * 3.0, (
+            f"High-noise CI width {mean_width_high:.4f} should be much larger "
+            f"than low-noise CI width {mean_width_low:.4f} (ratio < 3). "
+            "This suggests sigma^2 is not being incorporated."
         )
-        # At least 70% should be inside (noisy data, so not exactly 95%)
-        assert inside >= 0.7
 
     def test_edf_between_order_and_n(self):
         """EDF should be between order+1 and n."""

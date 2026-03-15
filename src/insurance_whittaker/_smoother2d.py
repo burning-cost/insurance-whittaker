@@ -5,6 +5,19 @@ Uses direct Cholesky solve on the Kronecker-structured system for small-to-mediu
 tables (up to ~100x100 cells).
 
 Reference: Biessy (2026), ASTIN Bulletin; WH R package compact.cpp.
+
+Vectorisation convention
+------------------------
+For a table Theta of shape (nx, nz), the vectorised form is row-major:
+``theta_vec = Theta.ravel()`` with index ``k = i * nz + j``.
+
+Under this convention:
+- Row-wise differences (along x, axis 0) are penalised by ``kron(Px, Iz)``
+- Column-wise differences (along z, axis 1) are penalised by ``kron(Ix, Pz)``
+
+Note the argument order: the first Kronecker factor acts on the row index,
+the second on the column index.  Reversing the order would swap which
+direction each lambda smooths.
 """
 
 from __future__ import annotations
@@ -71,13 +84,15 @@ def _solve_2d_system(
     ab_Px, ab_Pz:
         Banded penalty matrices (kept for API symmetry; not used internally).
     nx, nz:
-        Table dimensions.
+        Table dimensions.  Theta is (nx, nz) vectorised row-major.
     W_vec:
         Vectorised weights, length nx*nz, row-major (x varies slowest).
     y_vec:
         Vectorised response, length nx*nz.
     lam_x, lam_z:
-        Smoothing parameters.
+        Smoothing parameters.  lam_x penalises differences along axis 0
+        (rows / x-direction); lam_z penalises differences along axis 1
+        (columns / z-direction).
     order_x, order_z:
         Difference orders.
 
@@ -91,7 +106,9 @@ def _solve_2d_system(
     Iz = np.eye(nz)
     Ix = np.eye(nx)
 
-    P_kron = lam_x * np.kron(Iz, Px_full) + lam_z * np.kron(Pz_full, Ix)
+    # kron(Px, Iz): penalises differences along x (row direction, axis 0)
+    # kron(Ix, Pz): penalises differences along z (column direction, axis 1)
+    P_kron = lam_x * np.kron(Px_full, Iz) + lam_z * np.kron(Ix, Pz_full)
     A = np.diag(W_vec) + P_kron
     Wy = W_vec * y_vec
 
@@ -121,13 +138,14 @@ def solve_2d_full(
     Parameters
     ----------
     nx, nz:
-        Table dimensions.
+        Table dimensions.  Theta is (nx, nz) vectorised row-major.
     W_vec:
         Vectorised weights, length nx*nz.
     y_vec:
         Vectorised response, length nx*nz.
     lam_x, lam_z:
-        Smoothing parameters.
+        Smoothing parameters.  lam_x penalises differences along x (axis 0);
+        lam_z penalises differences along z (axis 1).
     order_x, order_z:
         Difference orders.
 
@@ -140,7 +158,9 @@ def solve_2d_full(
     Iz = np.eye(nz)
     Ix = np.eye(nx)
 
-    P_kron = lam_x * np.kron(Iz, Px_full) + lam_z * np.kron(Pz_full, Ix)
+    # kron(Px, Iz): penalises differences along x (row direction, axis 0)
+    # kron(Ix, Pz): penalises differences along z (column direction, axis 1)
+    P_kron = lam_x * np.kron(Px_full, Iz) + lam_z * np.kron(Ix, Pz_full)
     A = np.diag(W_vec) + P_kron
     Wy = W_vec * y_vec
 

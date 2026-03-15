@@ -20,7 +20,7 @@ from numpy.typing import ArrayLike, NDArray
 from ._utils import to_numpy_1d, penalty_banded
 from ._smoother2d import solve_2d_full
 
-LambdaMethod = Literal["reml", "gcv"]
+LambdaMethod = Literal["reml"]
 
 
 @dataclass
@@ -36,7 +36,7 @@ class WHResult2D:
     ci_upper:
         Upper bound of the 95% posterior credible interval, shape (nx, nz).
     std_fitted:
-        Posterior standard deviations, shape (nx, nz).
+        Posterior standard deviations sigma_hat * sqrt(diag(V)), shape (nx, nz).
     lambda_x:
         Smoothing parameter for the x-direction.
     lambda_z:
@@ -53,6 +53,8 @@ class WHResult2D:
         Labels for x-axis (first dimension).
     z_labels:
         Labels for z-axis (second dimension).
+    sigma2:
+        Estimated residual variance sigma_hat^2 = dev / (n - edf).
     """
 
     fitted: NDArray[np.float64]
@@ -67,6 +69,7 @@ class WHResult2D:
     criterion: str
     x_labels: NDArray | None = None
     z_labels: NDArray | None = None
+    sigma2: float = 1.0
 
     def to_polars(self, y: NDArray | None = None, weights: NDArray | None = None):
         """Return results as a long-format Polars DataFrame.
@@ -120,7 +123,7 @@ class WhittakerHenderson2D:
     order_z:
         Difference order for the z (column) direction.  Default 2.
     lambda_method:
-        Lambda selection criterion.  Currently 'reml' only.
+        Lambda selection criterion.  Only 'reml' is supported.
 
     Notes
     -----
@@ -220,12 +223,22 @@ class WhittakerHenderson2D:
             self.order_x, self.order_z,
         )
 
+        # EDF and sigma^2 estimate
+        edf = float(np.sum(w_vec * diag_v))
+        resid = y_vec - theta_vec
+        dev = float(np.sum(w_vec * resid ** 2))
+        n_total = nx * nz
+        dof = n_total - edf
+        if dof > 0.5:
+            sigma2 = dev / dof
+        else:
+            sigma2 = 1.0
+        sigma_hat = float(np.sqrt(max(sigma2, 0.0)))
+
         theta = theta_vec.reshape(nx, nz)
-        std_fitted = np.sqrt(np.maximum(diag_v, 0.0)).reshape(nx, nz)
+        std_fitted = (sigma_hat * np.sqrt(np.maximum(diag_v, 0.0))).reshape(nx, nz)
         ci_lower = theta - 1.96 * std_fitted
         ci_upper = theta + 1.96 * std_fitted
-
-        edf = float(np.sum(w_vec * diag_v))
 
         x_lbl = np.asarray(x_labels) if x_labels is not None else None
         z_lbl = np.asarray(z_labels) if z_labels is not None else None
@@ -243,4 +256,5 @@ class WhittakerHenderson2D:
             criterion=self.lambda_method,
             x_labels=x_lbl,
             z_labels=z_lbl,
+            sigma2=float(sigma2),
         )

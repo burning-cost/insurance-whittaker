@@ -64,7 +64,7 @@ class WHResult1D:
     ci_upper:
         Upper bound of the 95% posterior credible interval.
     std_fitted:
-        Posterior standard deviation sqrt(diag(V)).
+        Posterior standard deviation sigma_hat * sqrt(diag(V)).
     lambda_:
         Selected (or supplied) smoothing parameter.
     edf:
@@ -75,6 +75,8 @@ class WHResult1D:
         Lambda selection criterion used.
     criterion_value:
         Value of the selection criterion at the optimal lambda.
+    sigma2:
+        Estimated residual variance sigma_hat^2 = dev / (n - edf).
     """
 
     x: NDArray[np.float64]
@@ -89,6 +91,7 @@ class WHResult1D:
     order: int
     criterion: str
     criterion_value: float
+    sigma2: float = 1.0
 
     def to_polars(self):
         """Return results as a Polars DataFrame.
@@ -237,14 +240,29 @@ class WhittakerHenderson1D:
         Wy = w_arr * y_arr
         theta, cf, _ = _solve_system(P_full, w_arr, Wy, lam)
 
-        # Diagonal of V = A^{-1} for credible intervals
+        # EDF = trace((W + lam*P)^{-1} W) = sum_i W_i * V_ii
         diag_v = _diag_of_inverse(cf, n)
-        std_fitted = np.sqrt(np.maximum(diag_v, 0.0))
+        edf = float(np.sum(w_arr * diag_v))
+
+        # Estimate residual variance: sigma^2 = dev / (n - edf)
+        # For the Gaussian model y_i ~ N(theta_i, sigma^2 / w_i), the posterior
+        # covariance is sigma^2 * A^{-1}.  We estimate sigma^2 from the weighted
+        # residuals and incorporate it into the credible intervals.
+        resid = y_arr - theta
+        dev = float(np.sum(w_arr * resid ** 2))
+        dof = n - edf
+        if dof > 0.5:
+            sigma2 = dev / dof
+        else:
+            # Fewer than 0.5 residual degrees of freedom — smoother is nearly
+            # interpolating; sigma^2 is not estimable, fall back to 1.
+            sigma2 = 1.0
+        sigma_hat = float(np.sqrt(max(sigma2, 0.0)))
+
+        # Credible intervals: theta +/- 1.96 * sigma_hat * sqrt(diag(V))
+        std_fitted = sigma_hat * np.sqrt(np.maximum(diag_v, 0.0))
         ci_lower = theta - 1.96 * std_fitted
         ci_upper = theta + 1.96 * std_fitted
-
-        # EDF = trace((W + lam*P)^{-1} W) = sum_i W_i * V_ii
-        edf = float(np.sum(w_arr * diag_v))
 
         # Criterion value at selected lambda
         log_det_P_nz = 0.0
@@ -268,4 +286,5 @@ class WhittakerHenderson1D:
             order=self.order,
             criterion=self.lambda_method,
             criterion_value=crit_val,
+            sigma2=float(sigma2),
         )

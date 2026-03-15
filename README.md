@@ -188,7 +188,7 @@ result.ci_lower_rate # 95% CI on rate scale (always positive)
 | `'reml'` | Restricted marginal likelihood — recommended. Unique optimum, no local minima. |
 | `'gcv'` | Generalised cross-validation — faster, but can overfit. |
 | `'aic'` | AIC — penalises EDF. |
-| `'bic'` | BIC — stronger penalty, often under-smooths. |
+| `'bic'` | BIC — stronger penalty, often over-smooths relative to AIC. |
 
 REML is the default and is strongly preferred for actuarial applications. See Biessy (2026) for the simulation evidence.
 
