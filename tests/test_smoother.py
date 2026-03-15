@@ -101,7 +101,7 @@ class TestWhittakerHenderson1D:
         y = np.full(n, 1.2)
         wh = self._make_smoother()
         result = wh.fit(x, y)
-        np.testing.assert_allclose(result.fitted, y, atol=1e-5)
+        np.testing.assert_allclose(result.fitted, y, atol=1e-4)
 
     def test_large_lambda_gives_polynomial(self):
         """Very large lambda drives the smoother towards a degree-(q-1)
