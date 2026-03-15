@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   workflow_dispatch:
 
 permissions:
@@ -28,11 +28,11 @@ jobs:
           pip install pdoc
           pip install -e ".[plot]"
       - name: Generate docs
-        run: pdoc --html --output-dir ./docs insurance_whittaker
+        run: pdoc -o ./docs insurance_whittaker
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/insurance_whittaker
+          path: ./docs
 
   deploy:
     needs: build
