@@ -202,15 +202,23 @@ REML is the default and is strongly preferred for actuarial applications. See Bi
 
 ## Performance
 
-Benchmarked against manual quintile and decile banding on a synthetic UK motor driver age curve (63 age bands, thin tails). See `notebooks/benchmark_whittaker.py` for the full comparison.
+Benchmarked on a synthetic UK motor driver age curve (63 age bands, 17-79) with a known true U-shaped loss ratio and Poisson-driven observation noise. Three methods compared against the truth.
 
-- **Out-of-sample RMSE**: W-H with REML lambda selection reduces RMSE vs true signal by 15–25% relative to 5-band banding, and by 10–18% relative to 10-band banding. The gain is largest when exposure is thin (tail age groups).
-- **Smoothness**: W-H produces curves that are 5–15x smoother than banded relativities by the sum-of-squared-second-differences measure. Banding creates discontinuous jumps at bin boundaries that W-H avoids entirely.
-- **Bin boundary artefacts**: The maximum first difference between adjacent age bands is typically 3–5x larger under banding than under W-H. These jumps look wrong in rate filing exhibits and invite regulatory challenge.
-- **Lambda selection methods**: REML, GCV, AIC, and BIC produce qualitatively similar results on typical actuarial datasets. REML is preferred because it has a unique, well-defined maximum — GCV occasionally selects extreme lambdas on pathological data.
+DGP: true curve ranges 0.150-0.600, exposures 71-830 per band (thin at extremes). Benchmark run post P0 fixes on Databricks serverless.
+
+| Method | MSE | Max |error| |
+|--------|-----|------------|
+| Raw observed rates | 0.00041691 | 0.0804 |
+| Weighted 5-pt moving average | 0.00018361 | 0.0803 |
+| Whittaker-Henderson (order=2, REML) | 0.00017850 | 0.0831 |
+
+- **Overall MSE reduction**: W-H reduces MSE by **+57.2%** vs raw observed rates and by **+2.8%** vs the 5-point weighted moving average. The MA is a surprisingly competitive baseline on this dataset; the gains are cleaner when exposure is thinner.
+- **REML lambda selection**: Selected lambda=55,539 with effective df=7.7 — the algorithm chose substantial smoothing, which is correct given the noisy tails.
+- **Young driver accuracy (ages 17-24)**: True mean 0.3977. W-H estimates 0.3881 vs MA 0.3787. The moving average undershoots the young driver peak by more because boundary effects pull it towards the lower adjacent bands.
+- **Mature driver accuracy (ages 35-55)**: All methods are close — true 0.1532, W-H 0.1546, MA 0.1550, raw 0.1545. This is the well-observed part of the curve.
+- **Max |error| caveat**: W-H has a slightly larger maximum absolute error (0.0831 vs 0.0804) because REML over-smooths the sharp young-driver peak slightly. This is the correct bias-variance trade-off: lower MSE overall, slightly worse at the peak. If the young driver peak matters most to you, use a lower lambda or fit the young-driver segment separately.
+- **Lambda selection methods**: REML, GCV, AIC, and BIC produce qualitatively similar results. REML is preferred because it has a unique, well-defined maximum — GCV occasionally selects extreme lambdas on pathological data.
 - **Limitation**: W-H is a smoother, not a shape constraint. It does not enforce monotonicity. If your experience data has a genuine non-monotone feature (e.g., a real dip at age 40), W-H will preserve it. If that feature is noise, increase lambda — REML usually handles this automatically.
-
-
 ## Databricks Notebook
 
 A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/insurance_whittaker_demo.py).
