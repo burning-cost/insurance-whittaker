@@ -22,7 +22,7 @@ from databricks.sdk.service.workspace import ImportFormat, Language
 
 w = WorkspaceClient()
 
-base = "/home/ralph/repos/insurance-whittaker"
+base = "/home/ralph/insurance-whittaker"
 
 def read_b64(path):
     with open(path, "rb") as f:

@@ -49,7 +49,7 @@ where `w_i` are exposures, `D^q` is the q-th order difference operator, and `lam
 theta_hat = (W + lambda D'D)^{-1} W y
 ```
 
-Solved via banded Cholesky in O(n * q) time — fast enough for any realistic rating table.
+Solved via Cholesky factorisation — fast enough for any realistic rating table.
 
 Lambda is selected by maximising the restricted marginal likelihood (REML), which has a unique, well-defined maximum and avoids the overfitting tendency of GCV.
 
