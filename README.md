@@ -8,6 +8,8 @@
 
 Whittaker-Henderson smoothing for insurance pricing tables.
 
+**Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
+
 ## The problem
 
 Every UK motor or home pricing actuary smooths experience rating tables. You collect a year of claims data, bin it by age or vehicle group, and end up with something like this:
@@ -66,6 +68,8 @@ For plotting support:
 ```bash
 pip install insurance-whittaker[plot]
 ```
+
+> 💬 Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions). Found it useful? A ⭐ helps others find it.
 
 ## Quick start
 
