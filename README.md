@@ -60,13 +60,13 @@ Reference: Biessy (2026), *Whittaker-Henderson Smoothing Revisited*, ASTIN Bulle
 ## Installation
 
 ```bash
-pip install insurance-whittaker
+uv add insurance-whittaker
 ```
 
 For plotting support:
 
 ```bash
-pip install insurance-whittaker[plot]
+uv add "insurance-whittaker[plot]"
 ```
 
 > 💬 Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions). Found it useful? A ⭐ helps others find it.
