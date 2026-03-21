@@ -33,7 +33,7 @@ from .smoother import WhittakerHenderson1D, WHResult1D
 from .smoother2d import WhittakerHenderson2D, WHResult2D
 from .glm import WhittakerHendersonPoisson, WHResultPoisson
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "WhittakerHenderson1D",
     "WhittakerHenderson2D",
