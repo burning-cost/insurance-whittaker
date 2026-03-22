@@ -33,7 +33,12 @@ from .smoother import WhittakerHenderson1D, WHResult1D
 from .smoother2d import WhittakerHenderson2D, WHResult2D
 from .glm import WhittakerHendersonPoisson, WHResultPoisson
 
-__version__ = "0.1.1"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("insurance-whittaker")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # not installed
 __all__ = [
     "WhittakerHenderson1D",
     "WhittakerHenderson2D",
