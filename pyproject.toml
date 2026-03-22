@@ -7,7 +7,7 @@ authors = [
     { name = "Ralph", email = "pricing.frontier@gmail.com" }
 ]
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 keywords = ["insurance", "actuarial", "smoothing", "whittaker-henderson", "pricing"]
 classifiers = [
     "Development Status :: 3 - Alpha",
