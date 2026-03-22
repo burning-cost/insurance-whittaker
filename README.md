@@ -282,3 +282,17 @@ See `notebooks/whittaker_demo.py` for a full worked example and `notebooks/bench
 ## Licence
 
 MIT
+
+---
+
+## Part of the Burning Cost Toolkit
+
+Open-source Python libraries for UK personal lines insurance pricing. [Browse all libraries](https://burning-cost.github.io/tools/)
+
+| Library | Description |
+|---------|-------------|
+| [insurance-gam](https://github.com/burning-cost/insurance-gam) | Interpretable GAMs (EBM, ANAM, PIN) — the natural next step once your rating tables are smoothed |
+| [insurance-credibility](https://github.com/burning-cost/insurance-credibility) | Bühlmann-Straub credibility — blends smoothed table estimates with portfolio experience for thin segments |
+| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether your smoothed curves remain well-calibrated in production |
+| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — produces the sign-off pack for rating tables going into production |
+| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals — quantifies uncertainty around smoothed rate estimates |
