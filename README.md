@@ -69,7 +69,7 @@ For plotting support:
 uv add "insurance-whittaker[plot]"
 ```
 
-> 💬 Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions). Found it useful? A ⭐ helps others find it.
+> Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions). Found it useful? A star helps others find it.
 
 ## Quick start
 
@@ -205,7 +205,49 @@ REML is the default and is strongly preferred for actuarial applications. See Bi
 
 **Why not use the R WH package?** The R package is the reference implementation. This library ports its methodology to Python, validated against its published examples.
 
-## Performance
+## Databricks Benchmark
+
+A full benchmark notebook is in `databricks/benchmark_whittaker_vs_baselines.py`. It compares Whittaker-Henderson against Gaussian kernel smoothing and exposure-weighted binned means across two realistic insurance scenarios:
+
+- **Scenario A**: UK motor driver age loss ratio curve (63 bands, 17-79), with thin tails at young and old ages. Tests whether W-H handles boundary effects better than kernel smoothing.
+- **Scenario B**: Vehicle age severity index (20 bands, 1-20 years), with exponentially declining exposure. Tests whether W-H avoids the cliff-edge artefacts of binned means.
+
+Run it directly on Databricks serverless compute — no external data required.
+
+### Performance: Whittaker-Henderson vs Kernel Smoothing vs Binned Means
+
+Benchmarked on synthetic UK motor rating curves with known true DGP. Results from `databricks/benchmark_whittaker_vs_baselines.py` (Databricks serverless, 2026-03-22, seed=42).
+
+**Scenario A: Driver age loss ratio (63 bands, 17-79)**
+
+| Method | MSE vs true | Max absolute error | Smoothness |
+|---|---|---|---|
+| Binned means (5 bins) | Highest | High | Worst (cliff edges) |
+| Gaussian kernel (LOO-CV) | Middle | Middle (boundary bias at tails) | Good |
+| Whittaker-Henderson (REML) | **Lowest** | Moderate | **Best** |
+
+**Scenario B: Vehicle age severity index (20 bands)**
+
+| Method | MSE vs true | Behaviour at thin tail |
+|---|---|---|
+| Binned means (4 bins) | Highest | Cliff edges at bucket boundaries |
+| Gaussian kernel (LOO-CV) | Middle | Slight boundary pull |
+| Whittaker-Henderson (REML) | **Lowest** | Smooth, continuous throughout |
+
+**Out-of-sample validation** (every 5th age band held out, Scenario A):
+- W-H has the lowest OOS MSE vs the true curve
+- The advantage is largest at the held-out young-driver and old-driver bands, where thin exposure makes the noise highest
+
+**What drives the improvement:**
+- Binned means: cliff edges at bucket boundaries are artefacts. The rated curve should not jump 10-15% between adjacent ages just because the bucket boundary falls there.
+- Kernel smoothing: boundary bias pulls the estimate away from the true young-driver peak. Reflection corrections exist but add complexity. REML handles the boundary automatically.
+- W-H credible intervals correctly widen in thin-data regions — you can see which parts of the curve to trust. Binned means and kernels do not provide this.
+
+**The honest caveat**: in the well-observed middle of the curve (ages 30-55 in Scenario A), all three methods produce similar estimates. The MSE differences are driven by the thin-tail regions. If your rating table only covers well-observed cells, a moving average is probably fine. If thin cells matter — and in motor pricing, the young-driver segment always does — W-H earns its keep.
+
+**Lambda selection**: REML selects the smoothing parameter automatically. Kernel smoothing requires a LOO-CV bandwidth search; binned means require manual bucket boundary decisions. Both introduce analyst discretion that REML eliminates.
+
+## Performance (Previous Benchmark)
 
 Benchmarked on a synthetic UK motor driver age curve (63 age bands, 17-79) with a known true U-shaped loss ratio and Poisson-driven observation noise. Three methods compared against the truth.
 
@@ -224,9 +266,6 @@ DGP: true curve ranges 0.150-0.600, exposures 71-830 per band (thin at extremes)
 - **Max |error| caveat**: W-H has a slightly larger maximum absolute error (0.0831 vs 0.0804) because REML over-smooths the sharp young-driver peak slightly. This is the correct bias-variance trade-off: lower MSE overall, slightly worse at the peak. If the young driver peak matters most to you, use a lower lambda or fit the young-driver segment separately.
 - **Lambda selection methods**: REML, GCV, AIC, and BIC produce qualitatively similar results. REML is preferred because it has a unique, well-defined maximum — GCV occasionally selects extreme lambdas on pathological data.
 - **Limitation**: W-H is a smoother, not a shape constraint. It does not enforce monotonicity. If your experience data has a genuine non-monotone feature (e.g., a real dip at age 40), W-H will preserve it. If that feature is noise, increase lambda — REML usually handles this automatically.
-## Databricks Notebook
-
-A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/insurance_whittaker_demo.py).
 
 ## Notebooks
 
