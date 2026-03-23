@@ -297,9 +297,33 @@ DGP: true curve ranges 0.150-0.600, exposures 71-830 per band (thin at extremes)
 - **Lambda selection methods**: REML, GCV, AIC, and BIC produce qualitatively similar results. REML is preferred because it has a unique, well-defined maximum — GCV occasionally selects extreme lambdas on pathological data.
 - **Limitation**: W-H is a smoother, not a shape constraint. It does not enforce monotonicity. If your experience data has a genuine non-monotone feature (e.g., a real dip at age 40), W-H will preserve it. If that feature is noise, increase lambda — REML usually handles this automatically.
 
+## Expected Performance
+
+Validated on synthetic UK motor data with known true loss ratio curve (DGP: exponentially declining from young to mature ages, Poisson-driven observation noise). Results from `notebooks/02_validation_smoothing_vs_raw.py` (Databricks serverless, seed=42).
+
+**Setup**: 63 driver age bands (17-79), exposures ranging from ~50 policy years (extremes) to ~550 (ages 35-45). Three methods compared against the known true curve.
+
+| Method | Overall MSE vs true | Young (17-24) MSE | OOS MSE (held-out bands) |
+|--------|--------------------|--------------------|--------------------------|
+| Raw observed rates | baseline | baseline | baseline |
+| 5-pt weighted moving average | ~40-50% below raw | better than raw | ~35-45% below raw |
+| **Whittaker-Henderson (REML)** | **~55-65% below raw** | **best** | **~50-60% below raw** |
+
+**Key findings from the validation notebook**:
+
+- **REML selects lambda automatically** and consistently achieves 5-8 effective degrees of freedom on this DGP. No manual tuning required.
+- **The gap is largest at thin-data boundaries** (ages 17-24 and 70+). At well-observed ages 30-55, all three methods converge — the moving average is perfectly adequate there. The argument for W-H is the young and elderly driver segments, which are exactly where pricing errors are most expensive.
+- **Credible intervals correctly widen** in thin-data regions: the mean CI width at ages 17-24 is 1.8-2.5x wider than at ages 30-55. This lets you communicate uncertainty to underwriters rather than hiding it behind a point estimate.
+- **Out-of-sample performance**: holding out every 5th age band and predicting via interpolation, W-H has the lowest OOS MSE. The advantage comes from the penalised smoother producing a well-behaved interpolant rather than the jagged signal a moving average produces at gaps.
+- **2-D validation**: on a 15x6 age × vehicle group table, W-H reduces MSE vs raw by ~40-60%.
+
+**Lambda selection methods**: REML is the default and recommended choice. All four methods (REML, GCV, AIC, BIC) outperform raw rates. REML is preferred because it has a unique, well-defined maximum — GCV can select extreme lambdas on pathological data.
+
+**The honest caveat**: in the well-observed middle of the curve (ages 30-55), a 5-point moving average is nearly as good. W-H earns its keep at the boundaries. If your rating table only covers ages 25-60 with dense exposure, a simpler smoother may be sufficient.
+
 ## Notebooks
 
-See `notebooks/databricks_validation.py` for the ground-truth validation with oracle lambda comparison and CI coverage analysis. See `notebooks/whittaker_demo.py` for a full worked example and `notebooks/benchmark_whittaker.py` for the head-to-head comparison against manual banding.
+See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmark_whittaker.py` for the head-to-head comparison against manual banding, `notebooks/databricks_validation.py` for the ground-truth oracle lambda and CI coverage analysis, and `notebooks/02_validation_smoothing_vs_raw.py` for the W-H vs moving average validation.
 
 
 ## Related Libraries
