@@ -10,6 +10,14 @@ Whittaker-Henderson smoothing for insurance pricing tables.
 
 **Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
 
+## Why use this?
+
+- Every UK motor and home pricing actuary smooths experience rating tables — most do it in Excel or SAS because there has not been a production-quality Python implementation. This is that implementation.
+- REML lambda selection is automatic and principled: it finds the unique optimum without manual tuning, avoids the overfitting tendency of GCV, and follows Biessy (2026, ASTIN Bulletin) — the current reference methodology for actuarial smoothing.
+- Handles the Poisson structure correctly: smooth claim frequencies directly from count data and exposures, not from derived loss ratios that carry additional noise from thin cells.
+- Produces Bayesian credible intervals on all smoothed values — essential for a pricing team that needs to understand where the curve is reliable and where thin exposure makes it uncertain.
+- 2-D smoothing for cross-tables (age × vehicle group, age × claim-free years) uses the same framework: one install, one API for all your rating table smoothing needs.
+
 ## The problem
 
 Every UK motor or home pricing actuary smooths experience rating tables. You collect a year of claims data, bin it by age or vehicle group, and end up with something like this:
@@ -304,3 +312,17 @@ See `notebooks/databricks_validation.py` for the ground-truth validation with or
 ## Licence
 
 MIT
+
+---
+
+## Part of the Burning Cost Toolkit
+
+Open-source Python libraries for UK personal lines insurance pricing. [Browse all libraries](https://burning-cost.github.io/tools/)
+
+| Library | Description |
+|---------|-------------|
+| [insurance-gam](https://github.com/burning-cost/insurance-gam) | Interpretable GAMs (EBM, ANAM, PIN) — the natural next step once your rating tables are smoothed |
+| [insurance-credibility](https://github.com/burning-cost/insurance-credibility) | Bühlmann-Straub credibility — blends smoothed table estimates with portfolio experience for thin segments |
+| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether your smoothed curves remain well-calibrated in production |
+| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — produces the sign-off pack for rating tables going into production |
+| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals — quantifies uncertainty around smoothed rate estimates |
