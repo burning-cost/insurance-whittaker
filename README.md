@@ -335,6 +335,15 @@ See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmar
 - Bayesian credible intervals assume the smoothing parameter lambda is fixed at its REML estimate. They do not account for uncertainty in lambda itself. In practice this means intervals are slightly too narrow, particularly at the boundaries where REML often struggles most.
 
 
+## Limitations
+
+- Whittaker-Henderson is a smoother, not a shape constraint. It does not enforce monotonicity, convexity, or any actuarial prior about curve shape. If your experience data has a genuine non-monotone feature — a real dip at age 40 — W-H will preserve it. If that feature is noise, increase lambda. REML usually handles this automatically, but on very thin data it can under-smooth.
+- 2-D smoothing penalises each dimension independently. This assumes separable smoothness in age and the second dimension. Cross-effects where the optimal smoothness in one dimension depends on another (e.g., the young-driver peak is sharper for sports cars than hatchbacks) are not captured.
+- REML lambda selection can fail on degenerate data. With fewer than 8–10 observations per dimension, the REML objective can be flat or multimodal. Always inspect the smoothed curve visually when the number of rating bands is small.
+- The library operates on aggregated rating table data, not individual policy records. If your cells have fewer than 10 policy years on average, the smoothed rates can still have very wide credible intervals. The answer is more data, not more smoothing.
+- Bayesian credible intervals assume lambda is fixed at its REML estimate and do not account for uncertainty in lambda itself. In practice this means intervals are slightly too narrow, particularly at the boundaries.
+
+
 ## Related Libraries
 
 | Library | What it does |
