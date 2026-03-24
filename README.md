@@ -10,6 +10,10 @@ Experience rating tables are noisy: age 47 looks cheaper than age 46 for no reas
 
 **Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
 
+## Part of the Burning Cost stack
+
+Takes raw exposure and loss data from claims triangles or rating factor summaries. Feeds smoothed curves into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as input features or credibility adjustments) and [insurance-credibility](https://github.com/burning-cost/insurance-credibility) (as prior means for Bühlmann-Straub). → [See the full stack](https://burning-cost.github.io/stack/)
+
 ## Why use this?
 
 - Every UK motor and home pricing actuary smooths experience rating tables — most do it in Excel or SAS because there has not been a production-quality Python implementation. This is that implementation.
