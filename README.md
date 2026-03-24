@@ -351,6 +351,10 @@ See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmar
 | [insurance-glm-tools](https://github.com/burning-cost/insurance-glm-tools) | GLM tools including factor smoothing — Whittaker smoothing produces the graduated rates that GLM offsets consume |
 | [insurance-trend](https://github.com/burning-cost/insurance-trend) | Forward trend projection with structural break detection — complement to this library for the trend-fitting stage |
 
+## Training Course
+
+Want structured learning? [Insurance Pricing in Python](https://burning-cost.github.io/course) is a 12-module course covering the full pricing workflow. Module 3 covers rating table smoothing — Whittaker-Henderson, cross-validation of lambda, and producing publication-quality factor curves. £97 one-time.
+
 ## Licence
 
 MIT
