@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "insurance-whittaker"
+abstract: >
+  Whittaker-Henderson smoothing for insurance pricing tables. Provides 1-D and
+  2-D penalised least-squares smoothing with REML lambda selection, Poisson
+  extension for claim frequency data, and Bayesian credible intervals. REML
+  follows Biessy (2026, ASTIN Bulletin) — the current reference methodology for
+  actuarial smoothing of rating tables.
+authors:
+  - name: "Burning Cost Contributors"
+url: "https://github.com/burning-cost/insurance-whittaker"
+repository-code: "https://github.com/burning-cost/insurance-whittaker"
+license: MIT
+version: "0.1.2"
+date-released: "2026-03-21"
+keywords:
+  - insurance
+  - smoothing
+  - Whittaker-Henderson
+  - rating tables
+  - actuarial
+references:
+  - type: article
+    title: "Whittaker-Henderson Smoothing Revisited"
+    authors:
+      - family-names: Biessy
+        given-names: Guillaume
+    journal: "ASTIN Bulletin"
+    year: 2026
+    url: "https://arxiv.org/abs/2306.06932"
+  - type: book
+    title: "Graduation: the Revision of Estimates"
+    authors:
+      - family-names: London
+        given-names: Dick
+    publisher: "ACTEX Publications"
+    year: 1985

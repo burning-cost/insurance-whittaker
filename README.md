@@ -344,6 +344,16 @@ See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmar
 - Bayesian credible intervals assume lambda is fixed at its REML estimate and do not account for uncertainty in lambda itself. In practice this means intervals are slightly too narrow, particularly at the boundaries.
 
 
+## References
+
+1. Biessy, G. (2026). "Whittaker-Henderson Smoothing Revisited." *ASTIN Bulletin*. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932)
+
+2. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63-75.
+
+3. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29-40.
+
+---
+
 ## Related Libraries
 
 | Library | What it does |
