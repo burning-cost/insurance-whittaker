@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-BSD--3-blue)]()
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
 
-Whittaker-Henderson smoothing for insurance pricing tables.
+Experience rating tables are noisy: age 47 looks cheaper than age 46 for no reason other than random variation in thin cells, and a 5-point moving average applied at the boundaries undershoots the young-driver peak you actually want to charge for. insurance-whittaker fits the Whittaker-Henderson penalised smoother with automatic REML lambda selection, producing smooth, reliable curves with Bayesian credible intervals that tell you exactly where the data are thin.
 
 **Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
 
@@ -324,6 +324,15 @@ Validated on synthetic UK motor data with known true loss ratio curve (DGP: expo
 ## Notebooks
 
 See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmark_whittaker.py` for the head-to-head comparison against manual banding, `notebooks/databricks_validation.py` for the ground-truth oracle lambda and CI coverage analysis, and `notebooks/02_validation_smoothing_vs_raw.py` for the W-H vs moving average validation.
+
+
+## Limitations
+
+- Whittaker-Henderson is a smoother, not a shape constraint. It does not enforce monotonicity, convexity, or any actuarial prior about curve shape. If your experience data has a genuine non-monotone feature — a real dip at age 40 — W-H will preserve it. If that feature is noise, increase lambda. REML usually handles this automatically, but on very thin data it can under-smooth.
+- 2-D smoothing penalises each dimension independently. This assumes separable smoothness in age and the second dimension. Cross-effects where the optimal smoothing in age depends on vehicle group (e.g., the young-driver peak is sharper for sports cars) are not captured. Fit the interaction explicitly in your GLM rather than expecting 2-D smoothing to discover it.
+- REML lambda selection can fail on degenerate data. With fewer than 8–10 observations per dimension, the REML objective can be flat or multimodal. The optimiser will warn, but the selected lambda may not be the true optimum. Always inspect the smoothed curve visually when the number of rating bands is small.
+- The library operates on aggregated rating table data, not individual policy records. If your cells have fewer than 10 policy years on average, the smoothed rates can still have very wide credible intervals. The answer is more data, not more smoothing.
+- Bayesian credible intervals assume the smoothing parameter lambda is fixed at its REML estimate. They do not account for uncertainty in lambda itself. In practice this means intervals are slightly too narrow, particularly at the boundaries where REML often struggles most.
 
 
 ## Related Libraries
