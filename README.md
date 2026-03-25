@@ -369,6 +369,14 @@ See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmar
 
 Want structured learning? [Insurance Pricing in Python](https://burning-cost.github.io/course) is a 12-module course covering the full pricing workflow. Module 3 covers rating table smoothing — Whittaker-Henderson, cross-validation of lambda, and producing publication-quality factor curves. £97 one-time.
 
+## Community
+
+- **Questions?** Start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions)
+- **Found a bug?** Open an [Issue](https://github.com/burning-cost/insurance-whittaker/issues)
+- **Blog & tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
+
+If this library saves you time, a star on GitHub helps others find it.
+
 ## Licence
 
 MIT

@@ -34,3 +34,7 @@ The library uses `uv` for dependency management. Python 3.10+ is required.
 - Docstrings follow NumPy format
 - The core mathematical operations use NumPy and SciPy sparse matrices — keep numerical dependencies minimal
 - Tests should cover both 1D and 2D graduation cases, and include at least one test with deliberately sparse data to catch edge cases
+
+---
+
+For questions or to discuss ideas before opening an issue, start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions).
