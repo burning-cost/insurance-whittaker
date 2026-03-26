@@ -149,6 +149,10 @@ df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper
 result.plot()
 ```
 
+---
+
+If this is useful, a ⭐ on GitHub helps others find it.
+
 ### 2-D: smoothing an age x vehicle group table
 
 ```python
