@@ -5,6 +5,7 @@
 [![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-BSD--3-blue)]()
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
+[![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
 
 Experience rating tables are noisy: age 47 looks cheaper than age 46 for no reason other than random variation in thin cells, and a 5-point moving average applied at the boundaries undershoots the young-driver peak you actually want to charge for. insurance-whittaker fits the Whittaker-Henderson penalised smoother with automatic REML lambda selection, producing smooth, reliable curves with Bayesian credible intervals that tell you exactly where the data are thin.
 
