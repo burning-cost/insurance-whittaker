@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
 [![Python](https://img.shields.io/pypi/pyversions/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)]()
+[![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-BSD--3-blue)]()
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
 
