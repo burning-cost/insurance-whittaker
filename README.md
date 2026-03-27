@@ -1,6 +1,10 @@
 # insurance-whittaker
 
-[![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/) [![Python](https://img.shields.io/pypi/pyversions/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/) [![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/tests.yml) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/burning-cost/insurance-whittaker/blob/main/LICENSE) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb) [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
+[![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
+[![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-whittaker/blob/main/LICENSE)
+
+Whittaker-Henderson smoothing for UK insurance rating tables — automatic lambda selection, Bayesian credible intervals, Poisson-correct claim frequency fitting.
 
 ---
 
@@ -9,6 +13,8 @@
 Raw loss ratios by age band are noisy. Age 47 looks cheaper than age 46 for no reason other than random variation in thin cells, and a 5-point moving average applied at the boundaries undershoots the young-driver peak you actually want to charge for. Smoothing by hand introduces bias; smoothing without a principled method for choosing how much to smooth leaves you defending an arbitrary decision.
 
 Whittaker-Henderson is the actuarial standard for this — a penalised least-squares smoother with a mathematically principled way to select the smoothing parameter. Every UK pricing team does this. Until now, most did it in Excel or SAS.
+
+Regulatory context: IFRS 17 and Solvency II internal model reviews increasingly ask pricing teams to document the smoothing methodology and its uncertainty. A point estimate from a moving average does not answer that question. Bayesian credible intervals do.
 
 **Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
 
