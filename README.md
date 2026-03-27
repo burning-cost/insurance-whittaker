@@ -59,7 +59,7 @@ result.ci_upper    # 95% credible interval upper bound
 result.lambda_     # selected lambda (e.g. 847.3)
 result.edf         # effective degrees of freedom (e.g. 5.2)
 
-df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper
+df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper, std_fitted
 result.plot()            # requires insurance-whittaker[plot]
 ```
 
@@ -136,7 +136,7 @@ result = wh.fit(y, weights=exposures)
 result.fitted    # smoothed table, same shape as y
 result.lambda_x  # smoothing parameter in age direction
 result.lambda_z  # smoothing parameter in vehicle direction
-df = result.to_polars()  # long format: x, z, fitted, ci_lower, ci_upper
+df = result.to_polars()  # long format: x, z, fitted, ci_lower, ci_upper, std_fitted
 ```
 
 ---

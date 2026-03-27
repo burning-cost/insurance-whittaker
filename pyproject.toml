@@ -1,6 +1,6 @@
 [project]
 name = "insurance-whittaker"
-version = "0.1.3"
+version = "0.1.4"
 description = "Whittaker-Henderson smoothing for insurance pricing and actuarial rating tables: 1D and 2D graduation with automatic lambda selection"
 readme = "README.md"
 authors = [
