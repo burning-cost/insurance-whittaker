@@ -1,54 +1,83 @@
 # insurance-whittaker
 
-[![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
-[![Python](https://img.shields.io/pypi/pyversions/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
-[![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-whittaker/blob/main/LICENSE)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
-[![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
+[![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/) [![Python](https://img.shields.io/pypi/pyversions/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/) [![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-whittaker/blob/main/LICENSE) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb) [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
 
-Experience rating tables are noisy: age 47 looks cheaper than age 46 for no reason other than random variation in thin cells, and a 5-point moving average applied at the boundaries undershoots the young-driver peak you actually want to charge for. insurance-whittaker fits the Whittaker-Henderson penalised smoother with automatic REML lambda selection, producing smooth, reliable curves with Bayesian credible intervals that tell you exactly where the data are thin.
-
-**Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
-
-## Part of the Burning Cost stack
-
-Takes raw exposure and loss data from claims triangles or rating factor summaries. Feeds smoothed curves into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as input features or credibility adjustments) and [insurance-credibility](https://github.com/burning-cost/insurance-credibility) (as prior means for Bühlmann-Straub). → [See the full stack](https://burning-cost.github.io/stack/)
-
-## Why use this?
-
-- Every UK motor and home pricing actuary smooths experience rating tables — most do it in Excel or SAS because there has not been a production-quality Python implementation. This is that implementation.
-- REML lambda selection is automatic and principled: it finds the unique optimum without manual tuning, avoids the overfitting tendency of GCV, and follows Biessy (2026, ASTIN Bulletin) — the current reference methodology for actuarial smoothing.
-- Handles the Poisson structure correctly: smooth claim frequencies directly from count data and exposures, not from derived loss ratios that carry additional noise from thin cells.
-- Produces Bayesian credible intervals on all smoothed values — essential for a pricing team that needs to understand where the curve is reliable and where thin exposure makes it uncertain.
-- 2-D smoothing for cross-tables (age × vehicle group, age × claim-free years) uses the same framework: one install, one API for all your rating table smoothing needs.
+---
 
 ## The problem
 
-Every UK motor or home pricing actuary smooths experience rating tables. You collect a year of claims data, bin it by age or vehicle group, and end up with something like this:
+Raw loss ratios by age band are noisy. Age 47 looks cheaper than age 46 for no reason other than random variation in thin cells, and a 5-point moving average applied at the boundaries undershoots the young-driver peak you actually want to charge for. Smoothing by hand introduces bias; smoothing without a principled method for choosing how much to smooth leaves you defending an arbitrary decision.
 
-| Age band | Exposures | Observed frequency |
-|----------|-----------|--------------------|
-| 17       | 142       | 0.31               |
-| 18       | 287       | 0.24               |
-| 19       | 391       | 0.19               |
-| ...      | ...        | ...                |
-| 65       | 1,204     | 0.07               |
+Whittaker-Henderson is the actuarial standard for this — a penalised least-squares smoother with a mathematically principled way to select the smoothing parameter. Every UK pricing team does this. Until now, most did it in Excel or SAS.
 
-The raw numbers are noisy. Age 47 might look cheaper than age 46 for no reason other than random variation. You need a smooth, monotone-ish curve that respects the underlying data but is not held hostage by each cell's noise.
+**Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
 
-The standard tool for this in actuarial practice is **Whittaker-Henderson smoothing** — a penalised least-squares method with a mathematically principled way to select how smooth the curve should be. Every UK pricing team does this. Most do it in Excel or SAS, because there has not been a good Python implementation.
+---
 
-This library changes that.
+## Why this library?
+
+No production-quality Python implementation of Whittaker-Henderson existed. The R package (`WH` from CRAN) is the reference, but the Python actuarial ecosystem had nothing equivalent. This library ports the methodology, validated against the published R results.
+
+The key design choice is automatic lambda selection via REML (restricted marginal likelihood). REML has a unique, well-defined optimum, avoids the overfitting tendency of GCV, and follows Biessy (2026, ASTIN Bulletin) — the current actuarial reference on the topic. You do not tune a smoothing parameter; the data tells you how smooth the curve should be.
+
+---
+
+## Compared to alternatives
+
+| | Manual / Excel | scipy splines | R `WH` package | **insurance-whittaker** |
+|---|---|---|---|---|
+| Automatic lambda selection | No | Partial (CV) | Yes (REML) | Yes (REML) |
+| Bayesian credible intervals | No | No | No | Yes |
+| 2-D cross-tables | Tedious | No | Yes | Yes |
+| Poisson count extension | No | No | No | Yes |
+| Polars output | No | No | No | Yes |
+| Python-native | No | Yes | No | Yes |
+
+---
+
+## Quickstart
+
+```bash
+uv add insurance-whittaker
+```
+
+```python
+import numpy as np
+from insurance_whittaker import WhittakerHenderson1D
+
+ages = np.arange(17, 80)
+exposures = 500 * np.exp(-0.5 * ((ages - 40) / 18) ** 2) + 50
+true_lr = 0.35 * np.exp(-0.05 * (ages - 17)) + 0.06
+loss_ratios = true_lr + np.random.default_rng(42).normal(0, np.sqrt(true_lr / exposures))
+
+wh = WhittakerHenderson1D(order=2, lambda_method="reml")
+result = wh.fit(ages, loss_ratios, weights=exposures)
+
+result.fitted      # smoothed loss ratios
+result.ci_lower    # 95% credible interval lower bound
+result.ci_upper    # 95% credible interval upper bound
+result.lambda_     # selected lambda (e.g. 847.3)
+result.edf         # effective degrees of freedom (e.g. 5.2)
+
+df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper
+result.plot()            # requires insurance-whittaker[plot]
+```
+
+---
 
 ## What it does
 
-- **1-D smoothing**: age curves, NCD scales, vehicle group factors, bonus-malus scales.
-- **2-D smoothing**: cross-tables (age x vehicle group, age x claim-free years).
-- **Poisson extension**: smooth claim frequencies directly from count data, not derived loss ratios.
-- **Automatic lambda selection**: REML (recommended), GCV, AIC, or BIC. No manual tuning.
-- **Bayesian credible intervals**: posterior uncertainty bands on all smoothed values.
-- **Polars-native**: inputs and outputs use Polars DataFrames.
+**1-D smoothing** (`WhittakerHenderson1D`) — age curves, NCD scales, vehicle group factors, bonus-malus scales. Pass raw observations and exposures; get back a smooth curve with credible intervals.
+
+**2-D smoothing** (`WhittakerHenderson2D`) — cross-tables (age x vehicle group, age x claim-free years). Same framework, same API, one penalty per dimension.
+
+**Poisson extension** (`WhittakerHendersonPoisson`) — smooth claim frequencies directly from count data and exposures, not from derived loss ratios that carry additional noise from thin cells.
+
+**Automatic lambda selection** — REML (recommended), GCV, AIC, or BIC. REML has a unique optimum and no local minima.
+
+**Bayesian credible intervals** — posterior uncertainty bands on all smoothed values. They widen correctly in thin-data regions: wide at age 17 and age 80, narrow in the high-exposure core. This is essential for a pricing team that needs to know where the curve is reliable.
+
+---
 
 ## Mathematical basis
 
@@ -64,280 +93,125 @@ where `w_i` are exposures, `D^q` is the q-th order difference operator, and `lam
 theta_hat = (W + lambda D'D)^{-1} W y
 ```
 
-Solved via Cholesky factorisation — fast enough for any realistic rating table.
-
-Lambda is selected by maximising the restricted marginal likelihood (REML), which has a unique, well-defined maximum and avoids the overfitting tendency of GCV.
+Solved via Cholesky factorisation — under 0.1 seconds for a 64-band rating curve. Lambda is selected by maximising the restricted marginal likelihood (REML).
 
 Reference: Biessy (2026), *Whittaker-Henderson Smoothing Revisited*, ASTIN Bulletin. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932).
 
-## Installation
+---
 
-```bash
-uv add insurance-whittaker
-```
+## Validated performance
 
-For plotting support:
+On a synthetic driver age curve (63 bands, ages 17–79) with known true shape and realistic exposure distribution, benchmarked against a 5-point moving average and raw rates:
 
-```bash
-uv add "insurance-whittaker[plot]"
-```
+| Method | RMSE vs true | Thin-tail bands | Boundary behaviour |
+|---|---|---|---|
+| Raw rates | Highest | Worst | n/a |
+| 5-point moving average | ~55% of raw | Moderate | Pulls toward centre |
+| Whittaker-Henderson (REML) | **Lowest** | **Best** | Automatic |
 
-## Expected Performance
+REML selects lambda within 10% of the oracle (ground-truth-optimal) value. 95% credible intervals achieve at least 90% coverage on held-out bands, including the thin-tail ages.
 
-Validated on a synthetic driver age loss ratio curve (ages 17-80, 64 bands) with a known smooth true shape and realistic exposure distribution (thin tails at young/old ages, heavy in the 25-60 core). Results from `notebooks/databricks_validation.py`.
+In the well-observed middle of the curve (ages 30–55), a 5-point moving average and W-H produce nearly identical results. The gap is driven by the tails. If your rating table covers only well-observed ages, a moving average is fine. If young and old drivers are in scope — they always are in UK motor — W-H earns its keep.
 
-**Whittaker-Henderson vs raw rates and moving average:**
-
-| Metric | Raw rates | W-MA (5-pt) | W-H (REML) |
-|--------|-----------|-------------|------------|
-| RMSE vs true (all bands) | baseline | ~55% of raw | best |
-| RMSE vs true (test bands) | baseline | partial | best |
-| RMSE vs true (thin bands, <50 PY) | worst | moderate | best |
-| Smoothness (SSSD, lower=better) | highest | good | closest to true |
-| Boundary handling | n/a | pull toward centre | automatic |
-
-- **RMSE reduction vs raw rates:** W-H reduces RMSE by 40-60% overall. The improvement is largest at thin-tail bands (ages 17-21 and 70-80) where noise-to-signal ratio is highest and the moving average boundary bias adds further error.
-- **REML lambda selection:** REML selects a lambda within 10% of the oracle (ground-truth-optimal lambda found by exhaustive grid search). The RMSE gap between REML and oracle is typically less than 2%. Other methods (GCV, AIC, BIC) produce qualitatively similar results but REML is most reliable on pathological data.
-- **Bayesian credible intervals:** 95% CIs cover the true curve at ≥90% on test bands, including the thin-tail bands. CI width correctly scales with 1/sqrt(exposure) — widest at age 17 and age 80, narrowest in the high-exposure core. This is the right behaviour: wide CIs on thin bands tell you what you do not know.
-- **Moving average comparison:** In well-observed bands (ages 30-55), the 5-point weighted moving average and W-H produce nearly identical results. The RMSE gap is driven by thin bands. If your rating table covers only well-observed ages, a moving average is adequate. If young and old drivers are in scope, W-H earns its keep.
-- **Fit time:** under 0.1 seconds for a 64-band curve. Cholesky solve — essentially free.
-
-The full validation notebook is at `notebooks/databricks_validation.py`. It includes the oracle lambda grid search, credible interval coverage analysis, and a comparison of all four lambda selection methods.
-
-## Quick start
-
-### 1-D: smoothing a driver age curve
-
-```python
-import numpy as np
-from insurance_whittaker import WhittakerHenderson1D
-
-rng = np.random.default_rng(42)
-
-# 63 driver age bands, 17-79
-ages = np.arange(17, 80)
-
-# True underlying loss ratio: high at young ages, declines to mid-30s, then flat
-true_lr = 0.35 * np.exp(-0.05 * (ages - 17)) + 0.06
-
-# Exposures: thin at extremes, heavy in the middle (realistic UK motor)
-exposures = np.round(
-    500 * np.exp(-0.5 * ((ages - 40) / 18) ** 2) + 50
-).astype(float)
-
-# Observed loss ratios: add Poisson-driven noise (variance ~ 1/exposure)
-noise_sd = np.sqrt(true_lr * (1 - true_lr) / exposures)
-loss_ratios = true_lr + rng.normal(0, noise_sd)
-loss_ratios = np.clip(loss_ratios, 0.01, 1.0)
-
-wh = WhittakerHenderson1D(order=2, lambda_method='reml')
-result = wh.fit(ages, loss_ratios, weights=exposures)
-
-# Smoothed values
-result.fitted        # array of smoothed loss ratios
-result.ci_lower      # 95% credible interval lower bound
-result.ci_upper      # 95% credible interval upper bound
-result.lambda_       # selected lambda (e.g., 847.3)
-result.edf           # effective degrees of freedom (e.g., 5.2)
-
-# Polars output
-df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper
-
-# Plot (requires insurance-whittaker[plot])
-result.plot()
-```
+Full validation notebook: `notebooks/databricks_validation.py`.
 
 ---
 
-### 2-D: smoothing an age x vehicle group table
+## 2-D example
 
 ```python
 import numpy as np
 from insurance_whittaker import WhittakerHenderson2D
 
-rng = np.random.default_rng(42)
-
 # 10 age bands x 5 vehicle groups
-n_age, n_veh = 10, 5
-age_midpoints = np.linspace(20, 65, n_age)
-veh_groups = np.arange(1, n_veh + 1)  # 1=small hatchback, 5=prestige/sports
+true_lr = (0.08 + 0.15 * np.exp(-0.04 * np.linspace(20, 65, 10)))[:, None] \
+        + 0.03 * np.arange(1, 6)[None, :]
+exposures = np.outer([80, 200, 350, 450, 500, 480, 420, 300, 180, 90],
+                     [300, 250, 200, 150, 100])
+y = np.clip(true_lr + np.random.default_rng(0).normal(0, np.sqrt(true_lr / exposures)), 0.01, None)
 
-# True signal: age effect (U-shaped) + vehicle effect (linear)
-age_effect = 0.08 + 0.15 * np.exp(-0.04 * (age_midpoints - 20))
-veh_effect = 0.03 * (veh_groups - 1)
-true_lr = age_effect[:, None] + veh_effect[None, :]  # (10, 5)
-
-# Exposure grid: total 20,000 policies distributed unevenly
-base_exp = np.outer(
-    np.array([80, 200, 350, 450, 500, 480, 420, 300, 180, 90], dtype=float),
-    np.array([300, 250, 200, 150, 100], dtype=float),
-)
-# Normalise to realistic policy counts per cell
-exposures = base_exp / base_exp.sum() * 20_000
-
-# Add noise: variance ~ true_lr / exposure
-noise_sd = np.sqrt(true_lr / exposures)
-y = true_lr + rng.normal(0, noise_sd)
-y = np.clip(y, 0.01, None)
-
-# y is a (n_age x n_veh) NumPy array
 wh = WhittakerHenderson2D(order_x=2, order_z=2)
 result = wh.fit(y, weights=exposures)
 
-result.fitted        # smoothed table, same shape as y
-result.lambda_x      # smoothing in age direction
-result.lambda_z      # smoothing in vehicle direction
-
+result.fitted    # smoothed table, same shape as y
+result.lambda_x  # smoothing parameter in age direction
+result.lambda_z  # smoothing parameter in vehicle direction
 df = result.to_polars()  # long format: x, z, fitted, ci_lower, ci_upper
 ```
 
-### Poisson: smoothing claim frequencies
+---
+
+## Poisson example
 
 ```python
 import numpy as np
 from insurance_whittaker import WhittakerHendersonPoisson
 
-rng = np.random.default_rng(42)
-
 ages = np.arange(17, 80)
-
-# True claim rate (per policy year): high young, declines with age
 true_rate = 0.28 * np.exp(-0.04 * (ages - 17)) + 0.04
+policy_years = (800 * np.exp(-0.5 * ((ages - 38) / 16) ** 2) + 80).astype(float)
+claim_counts = np.random.default_rng(42).poisson(true_rate * policy_years).astype(float)
 
-# Policy years by age band
-policy_years = np.round(
-    800 * np.exp(-0.5 * ((ages - 38) / 16) ** 2) + 80
-).astype(float)
-
-# Observed claim counts: Poisson draws
-claim_counts = rng.poisson(true_rate * policy_years).astype(float)
-
-# Claim counts and exposure, not derived rates
 wh = WhittakerHendersonPoisson(order=2)
 result = wh.fit(ages, counts=claim_counts, exposure=policy_years)
 
-result.fitted_rate   # smoothed claim rate per policy year
-result.fitted_count  # smoothed expected claims
-result.ci_lower_rate # 95% CI on rate scale (always positive)
+result.fitted_rate    # smoothed claim rate per policy year
+result.fitted_count   # smoothed expected claims
+result.ci_lower_rate  # 95% CI on rate scale (always positive)
 ```
+
+---
 
 ## Lambda selection
 
 | Method | Description |
-|--------|-------------|
+|---|---|
 | `'reml'` | Restricted marginal likelihood — recommended. Unique optimum, no local minima. |
-| `'gcv'` | Generalised cross-validation — faster, but can overfit. |
-| `'aic'` | AIC — penalises EDF. |
+| `'gcv'` | Generalised cross-validation — faster, can overfit on small datasets. |
+| `'aic'` | AIC — penalises effective degrees of freedom. |
 | `'bic'` | BIC — stronger penalty, often over-smooths relative to AIC. |
 
 REML is the default and is strongly preferred for actuarial applications. See Biessy (2026) for the simulation evidence.
 
-## Design choices
-
-**Why Polars?** The rest of the Burning Cost toolchain uses Polars. NumPy arrays are also accepted everywhere.
-
-**Why no B-splines?** Biessy (2026) shows that 2-D P-splines distort the fit in ways WH does not, because the B-spline basis imposes smoothness constraints that are unrelated to the data structure. WH smoothing on the raw grid cells is the right approach for actuarial tables.
-
-**Why not use the R WH package?** The R package is the reference implementation. This library ports its methodology to Python, validated against its published examples.
-
-## Databricks Benchmark
-
-A full benchmark notebook is in `databricks/benchmark_whittaker_vs_baselines.py`. It compares Whittaker-Henderson against Gaussian kernel smoothing and exposure-weighted binned means across two realistic insurance scenarios:
-
-- **Scenario A**: UK motor driver age loss ratio curve (63 bands, 17-79), with thin tails at young and old ages. Tests whether W-H handles boundary effects better than kernel smoothing.
-- **Scenario B**: Vehicle age severity index (20 bands, 1-20 years), with exponentially declining exposure. Tests whether W-H avoids the cliff-edge artefacts of binned means.
-
-Run it directly on Databricks serverless compute — no external data required.
-
-### Performance: Whittaker-Henderson vs Kernel Smoothing vs Binned Means
-
-Benchmarked on synthetic UK motor rating curves with known true DGP. Results from `databricks/benchmark_whittaker_vs_baselines.py` (Databricks serverless, 2026-03-22, seed=42).
-
-**Scenario A: Driver age loss ratio (63 bands, 17-79)**
-
-| Method | MSE vs true | Max absolute error | Smoothness |
-|---|---|---|---|
-| Binned means (5 bins) | Highest | High | Worst (cliff edges) |
-| Gaussian kernel (LOO-CV) | Middle | Middle (boundary bias at tails) | Good |
-| Whittaker-Henderson (REML) | **Lowest** | Moderate | **Best** |
-
-**Scenario B: Vehicle age severity index (20 bands)**
-
-| Method | MSE vs true | Behaviour at thin tail |
-|---|---|---|
-| Binned means (4 bins) | Highest | Cliff edges at bucket boundaries |
-| Gaussian kernel (LOO-CV) | Middle | Slight boundary pull |
-| Whittaker-Henderson (REML) | **Lowest** | Smooth, continuous throughout |
-
-**Out-of-sample validation** (every 5th age band held out, Scenario A):
-- W-H has the lowest OOS MSE vs the true curve
-- The advantage is largest at the held-out young-driver and old-driver bands, where thin exposure makes the noise highest
-
-**What drives the improvement:**
-- Binned means: cliff edges at bucket boundaries are artefacts. The rated curve should not jump 10-15% between adjacent ages just because the bucket boundary falls there.
-- Kernel smoothing: boundary bias pulls the estimate away from the true young-driver peak. Reflection corrections exist but add complexity. REML handles the boundary automatically.
-- W-H credible intervals correctly widen in thin-data regions — you can see which parts of the curve to trust. Binned means and kernels do not provide this.
-
-**The honest caveat**: in the well-observed middle of the curve (ages 30-55 in Scenario A), all three methods produce similar estimates. The MSE differences are driven by the thin-tail regions. If your rating table only covers well-observed cells, a moving average is probably fine. If thin cells matter — and in motor pricing, the young-driver segment always does — W-H earns its keep.
-
-**Lambda selection**: REML selects the smoothing parameter automatically. Kernel smoothing requires a LOO-CV bandwidth search; binned means require manual bucket boundary decisions. Both introduce analyst discretion that REML eliminates.
-
-## Notebooks
-
-See `notebooks/whittaker_demo.py` for a full worked example, `notebooks/benchmark_whittaker.py` for the head-to-head comparison against manual banding, `notebooks/databricks_validation.py` for the ground-truth oracle lambda and CI coverage analysis, and `notebooks/02_validation_smoothing_vs_raw.py` for the W-H vs moving average validation.
-
+---
 
 ## Limitations
 
-- Whittaker-Henderson is a smoother, not a shape constraint. It does not enforce monotonicity, convexity, or any actuarial prior about curve shape. If your experience data has a genuine non-monotone feature — a real dip at age 40 — W-H will preserve it. If that feature is noise, increase lambda. REML usually handles this automatically, but on very thin data it can under-smooth.
-- 2-D smoothing penalises each dimension independently. This assumes separable smoothness in age and the second dimension. Cross-effects where the optimal smoothing in age depends on vehicle group (e.g., the young-driver peak is sharper for sports cars) are not captured. Fit the interaction explicitly in your GLM rather than expecting 2-D smoothing to discover it.
-- REML lambda selection can fail on degenerate data. With fewer than 8–10 observations per dimension, the REML objective can be flat or multimodal. The optimiser will warn, but the selected lambda may not be the true optimum. Always inspect the smoothed curve visually when the number of rating bands is small.
-- The library operates on aggregated rating table data, not individual policy records. If your cells have fewer than 10 policy years on average, the smoothed rates can still have very wide credible intervals. The answer is more data, not more smoothing.
-- Bayesian credible intervals assume the smoothing parameter lambda is fixed at its REML estimate. They do not account for uncertainty in lambda itself. In practice this means intervals are slightly too narrow, particularly at the boundaries where REML often struggles most.
+- W-H is a smoother, not a shape constraint. It does not enforce monotonicity. If you want a monotone NCD curve, apply a post-fit isotonic regression pass or set a minimum lambda.
+- 2-D smoothing penalises each dimension independently. Cross-effects where optimal smoothness in age depends on vehicle group are not captured. Fit the interaction explicitly in your GLM.
+- REML can fail on degenerate data. With fewer than 8–10 observations per dimension, the REML objective can be flat. The optimiser will warn, but inspect the curve visually on short tables.
+- Credible intervals fix lambda at its REML estimate. They do not account for uncertainty in lambda itself, so they are slightly too narrow — most visibly at boundaries.
 
+---
+
+## Part of the Burning Cost stack
+
+Takes raw exposure and loss data from claims triangles or rating factor summaries. Feeds smoothed curves into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as input features) and [insurance-credibility](https://github.com/burning-cost/insurance-credibility) (as prior means for Bühlmann-Straub). [See the full stack](https://burning-cost.github.io/stack/)
+
+| Library | Description |
+|---|---|
+| [insurance-gam](https://github.com/burning-cost/insurance-gam) | Interpretable GAMs — the natural next step once your rating tables are smoothed |
+| [insurance-credibility](https://github.com/burning-cost/insurance-credibility) | Bühlmann-Straub credibility — blends smoothed table estimates with portfolio experience |
+| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether smoothed curves remain calibrated in production |
+| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — produces the sign-off pack for rating tables |
+
+---
 
 ## References
 
 1. Biessy, G. (2026). "Whittaker-Henderson Smoothing Revisited." *ASTIN Bulletin*. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932)
-
-2. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63-75.
-
-3. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29-40.
+2. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63–75.
+3. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29–40.
 
 ---
-
-## Related Libraries
-
-| Library | What it does |
-|---------|-------------|
-| [insurance-glm-tools](https://github.com/burning-cost/insurance-glm-tools) | GLM tools including factor smoothing — Whittaker smoothing produces the graduated rates that GLM offsets consume |
-| [insurance-trend](https://github.com/burning-cost/insurance-trend) | Forward trend projection with structural break detection — complement to this library for the trend-fitting stage |
-
-## Training Course
-
-Want structured learning? [Insurance Pricing in Python](https://burning-cost.github.io/course) is a 12-module course covering the full pricing workflow. Module 3 covers rating table smoothing — Whittaker-Henderson, cross-validation of lambda, and producing publication-quality factor curves. £97 one-time.
 
 ## Community
 
 - **Questions?** Start a [Discussion](https://github.com/burning-cost/insurance-whittaker/discussions)
 - **Found a bug?** Open an [Issue](https://github.com/burning-cost/insurance-whittaker/issues)
-- **Blog & tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
-
+- **Blog and tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
+- **Training course:** [Insurance Pricing in Python](https://burning-cost.github.io/course) — Module 3 covers rating table smoothing. £97 one-time.
 
 ## Licence
 
-MIT
-
----
-
-## Part of the Burning Cost Toolkit
-
-Open-source Python libraries for UK personal lines insurance pricing. [Browse all libraries](https://burning-cost.github.io/tools/)
-
-| Library | Description |
-|---------|-------------|
-| [insurance-gam](https://github.com/burning-cost/insurance-gam) | Interpretable GAMs (EBM, ANAM, PIN) — the natural next step once your rating tables are smoothed |
-| [insurance-credibility](https://github.com/burning-cost/insurance-credibility) | Bühlmann-Straub credibility — blends smoothed table estimates with portfolio experience for thin segments |
-| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether your smoothed curves remain well-calibrated in production |
-| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — produces the sign-off pack for rating tables going into production |
-| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals — quantifies uncertainty around smoothed rate estimates |
+BSD-3-Clause
