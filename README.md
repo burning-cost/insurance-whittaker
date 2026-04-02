@@ -205,9 +205,12 @@ Takes raw exposure and loss data from claims triangles or rating factor summarie
 
 ## References
 
-1. Biessy, G. (2026). "Whittaker-Henderson Smoothing Revisited." *ASTIN Bulletin*. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932)
-2. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63–75.
-3. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29–40.
+1. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63–75. (Original formulation of the graduation criterion as a penalised least-squares problem.)
+2. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29–40. (Extension to exposure-weighted graduation; basis for the two-dimensional case.)
+3. Eilers, P.H.C. & Marx, B.D. (1996). "Flexible Smoothing with B-splines and Penalties." *Statistical Science*, 11(2), 89–121. [doi:10.1214/ss/1038425655](https://doi.org/10.1214/ss/1038425655) (P-splines — closest modern analogue; clarifies the penalised regression interpretation.)
+4. Lee, W.C. & Fung, W.K. (2001). "Graduation by the Whittaker-Henderson method with application to the actuarial table of illness." *Statistics in Medicine*, 20(19), 2945–2962. (Two-dimensional Whittaker graduation for age × duration tables.)
+5. Kimeldorf, G.S. & Wahba, G. (1970). "A Correspondence Between Bayesian Estimation on Stochastic Processes and Smoothing by Splines." *The Annals of Mathematical Statistics*, 41(2), 495–502. [doi:10.1214/aoms/1177697089](https://doi.org/10.1214/aoms/1177697089) (Bayesian interpretation of the smoothing prior; underpins REML lambda selection.)
+6. Biessy, G. (2026). "Whittaker-Henderson Smoothing Revisited." *ASTIN Bulletin*. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932) (REML-based automatic lambda selection — the method this library implements.)
 
 ---
 
