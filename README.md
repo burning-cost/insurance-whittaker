@@ -1,10 +1,16 @@
 # insurance-whittaker
 
 [![PyPI](https://img.shields.io/pypi/v/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
+[![Downloads](https://img.shields.io/pypi/dm/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
+[![Python](https://img.shields.io/pypi/pyversions/insurance-whittaker)](https://pypi.org/project/insurance-whittaker/)
 [![Tests](https://github.com/burning-cost/insurance-whittaker/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-whittaker/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-whittaker/blob/main/LICENSE)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/burning-cost-examples/blob/main/notebooks/burning-cost-in-30-minutes.ipynb)
+[![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-whittaker/blob/main/notebooks/quickstart.ipynb)
 
-Whittaker-Henderson smoothing for UK insurance rating tables — automatic lambda selection, Bayesian credible intervals, Poisson-correct claim frequency fitting.
+> Whittaker-Henderson smoothing for UK insurance rating tables — automatic lambda selection via REML, Bayesian credible intervals, and Poisson-correct claim frequency fitting. The actuarial standard for graduation, now in Python.
+
+**Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
 
 ---
 
@@ -16,7 +22,46 @@ Whittaker-Henderson is the actuarial standard for this — a penalised least-squ
 
 Regulatory context: IFRS 17 and Solvency II internal model reviews increasingly ask pricing teams to document the smoothing methodology and its uncertainty. A point estimate from a moving average does not answer that question. Bayesian credible intervals do.
 
-**Blog post:** [Whittaker-Henderson Smoothing for Insurance Pricing](https://burning-cost.github.io/2026/03/09/whittaker-henderson-smoothing-for-insurance-pricing/)
+---
+
+## Installation
+
+```bash
+pip install insurance-whittaker
+# or
+uv add insurance-whittaker
+```
+
+For plots:
+
+```bash
+pip install "insurance-whittaker[plot]"
+```
+
+---
+
+## Quick start
+
+```python
+import numpy as np
+from insurance_whittaker import WhittakerHenderson1D
+
+ages = np.arange(17, 80)
+exposures = 500 * np.exp(-0.5 * ((ages - 40) / 18) ** 2) + 50
+true_lr = 0.35 * np.exp(-0.05 * (ages - 17)) + 0.06
+loss_ratios = true_lr + np.random.default_rng(42).normal(0, np.sqrt(true_lr / exposures))
+
+wh = WhittakerHenderson1D(order=2, lambda_method="reml")
+result = wh.fit(ages, loss_ratios, weights=exposures)
+
+print(result.lambda_)   # e.g. 847.3 — selected automatically via REML
+print(result.edf)       # effective degrees of freedom — e.g. 5.2
+
+df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper, std_fitted
+result.plot()            # requires insurance-whittaker[plot]
+```
+
+See `examples/` for 2-D smoothing (age × vehicle group), Poisson count fitting, and NCD scale graduation.
 
 ---
 
@@ -41,41 +86,11 @@ The key design choice is automatic lambda selection via REML (restricted margina
 
 ---
 
-## Quickstart
-
-```bash
-uv add insurance-whittaker
-```
-
-```python
-import numpy as np
-from insurance_whittaker import WhittakerHenderson1D
-
-ages = np.arange(17, 80)
-exposures = 500 * np.exp(-0.5 * ((ages - 40) / 18) ** 2) + 50
-true_lr = 0.35 * np.exp(-0.05 * (ages - 17)) + 0.06
-loss_ratios = true_lr + np.random.default_rng(42).normal(0, np.sqrt(true_lr / exposures))
-
-wh = WhittakerHenderson1D(order=2, lambda_method="reml")
-result = wh.fit(ages, loss_ratios, weights=exposures)
-
-result.fitted      # smoothed loss ratios
-result.ci_lower    # 95% credible interval lower bound
-result.ci_upper    # 95% credible interval upper bound
-result.lambda_     # selected lambda (e.g. 847.3)
-result.edf         # effective degrees of freedom (e.g. 5.2)
-
-df = result.to_polars()  # columns: x, y, weight, fitted, ci_lower, ci_upper, std_fitted
-result.plot()            # requires insurance-whittaker[plot]
-```
-
----
-
 ## What it does
 
 **1-D smoothing** (`WhittakerHenderson1D`) — age curves, NCD scales, vehicle group factors, bonus-malus scales. Pass raw observations and exposures; get back a smooth curve with credible intervals.
 
-**2-D smoothing** (`WhittakerHenderson2D`) — cross-tables (age x vehicle group, age x claim-free years). Same framework, same API, one penalty per dimension.
+**2-D smoothing** (`WhittakerHenderson2D`) — cross-tables (age × vehicle group, age × claim-free years). Same framework, same API, one penalty per dimension.
 
 **Poisson extension** (`WhittakerHendersonPoisson`) — smooth claim frequencies directly from count data and exposures, not from derived loss ratios that carry additional noise from thin cells.
 
@@ -190,9 +205,20 @@ REML is the default and is strongly preferred for actuarial applications. See Bi
 
 ---
 
-## Part of the Burning Cost stack
+## References
 
-Takes raw exposure and loss data from claims triangles or rating factor summaries. Feeds smoothed curves into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as input features) and [insurance-credibility](https://github.com/burning-cost/insurance-credibility) (as prior means for Bühlmann-Straub). [See the full stack](https://burning-cost.github.io/stack/)
+1. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63–75.
+2. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29–40.
+3. Eilers, P.H.C. & Marx, B.D. (1996). "Flexible Smoothing with B-splines and Penalties." *Statistical Science*, 11(2), 89–121. [doi:10.1214/ss/1038425655](https://doi.org/10.1214/ss/1038425655)
+4. Lee, W.C. & Fung, W.K. (2001). "Graduation by the Whittaker-Henderson method with application to the actuarial table of illness." *Statistics in Medicine*, 20(19), 2945–2962.
+5. Kimeldorf, G.S. & Wahba, G. (1970). "A Correspondence Between Bayesian Estimation on Stochastic Processes and Smoothing by Splines." *The Annals of Mathematical Statistics*, 41(2), 495–502. [doi:10.1214/aoms/1177697089](https://doi.org/10.1214/aoms/1177697089)
+6. Biessy, G. (2026). "Whittaker-Henderson Smoothing Revisited." *ASTIN Bulletin*. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932)
+
+---
+
+## Part of the Burning Cost toolkit
+
+Takes raw exposure and loss data from claims triangles or rating factor summaries. Feeds smoothed curves into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as input features) and [insurance-credibility](https://github.com/burning-cost/insurance-credibility) (as prior means for Bühlmann-Straub).
 
 | Library | Description |
 |---|---|
@@ -201,16 +227,7 @@ Takes raw exposure and loss data from claims triangles or rating factor summarie
 | [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether smoothed curves remain calibrated in production |
 | [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — produces the sign-off pack for rating tables |
 
----
-
-## References
-
-1. Whittaker, E.T. (1923). "On a New Method of Graduation." *Proceedings of the Edinburgh Mathematical Society*, 41, 63–75. (Original formulation of the graduation criterion as a penalised least-squares problem.)
-2. Henderson, R. (1924). "A New Method of Graduation." *Transactions of the Actuarial Society of America*, 25, 29–40. (Extension to exposure-weighted graduation; basis for the two-dimensional case.)
-3. Eilers, P.H.C. & Marx, B.D. (1996). "Flexible Smoothing with B-splines and Penalties." *Statistical Science*, 11(2), 89–121. [doi:10.1214/ss/1038425655](https://doi.org/10.1214/ss/1038425655) (P-splines — closest modern analogue; clarifies the penalised regression interpretation.)
-4. Lee, W.C. & Fung, W.K. (2001). "Graduation by the Whittaker-Henderson method with application to the actuarial table of illness." *Statistics in Medicine*, 20(19), 2945–2962. (Two-dimensional Whittaker graduation for age × duration tables.)
-5. Kimeldorf, G.S. & Wahba, G. (1970). "A Correspondence Between Bayesian Estimation on Stochastic Processes and Smoothing by Splines." *The Annals of Mathematical Statistics*, 41(2), 495–502. [doi:10.1214/aoms/1177697089](https://doi.org/10.1214/aoms/1177697089) (Bayesian interpretation of the smoothing prior; underpins REML lambda selection.)
-6. Biessy, G. (2026). "Whittaker-Henderson Smoothing Revisited." *ASTIN Bulletin*. [arXiv:2306.06932](https://arxiv.org/abs/2306.06932) (REML-based automatic lambda selection — the method this library implements.)
+Part of the [Burning Cost](https://burning-cost.github.io) open-source insurance analytics toolkit. → [See all libraries](https://burning-cost.github.io/stack/)
 
 ---
 
@@ -220,6 +237,8 @@ Takes raw exposure and loss data from claims triangles or rating factor summarie
 - **Found a bug?** Open an [Issue](https://github.com/burning-cost/insurance-whittaker/issues)
 - **Blog and tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
 - **Training course:** [Insurance Pricing in Python](https://burning-cost.github.io/course) — Module 3 covers rating table smoothing. £97 one-time.
+
+Found it useful? A [GitHub star](https://github.com/burning-cost/insurance-whittaker) helps others find it.
 
 ## Licence
 
