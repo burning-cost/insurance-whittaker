@@ -795,8 +795,8 @@ class TestWhittakerHendersonPoissonExtra:
         assert result.lambda_ == pytest.approx(100.0)
         assert result.iterations > 0
 
-    def test_large_lambda_gives_near_constant_rate(self):
-        """Very large lambda on Poisson data should give near-constant fitted rate."""
+    def test_large_lambda_gives_near_linear_rate(self):
+        """Very large lambda (order=2) penalises second diffs, giving near-linear fitted rate."""
         rng = np.random.default_rng(24)
         n = 30
         x = np.arange(n, dtype=float)
@@ -805,7 +805,9 @@ class TestWhittakerHendersonPoissonExtra:
         counts = rng.poisson(true_rate * exposure)
         wh = WhittakerHendersonPoisson(order=2)
         result = wh.fit(x, counts, exposure, lambda_=1e7)
-        assert np.std(result.fitted_rate) < 0.01
+        # Order-2 penalty drives toward linear, so second diffs should be tiny
+        second_diffs = np.diff(result.fitted_rate, n=2)
+        assert np.max(np.abs(second_diffs)) < 1e-3
 
     def test_fitted_count_positive(self):
         """Fitted counts must be positive (since rate > 0 and exposure >= 0)."""
@@ -1020,16 +1022,18 @@ class TestSolve2DFull:
 
 class TestNumericalCorrectness:
 
-    def test_1d_smoother_recovers_quadratic_exactly_at_large_lambda(self):
-        """At very large lambda (order=2), the smoother should recover the
-        unique quadratic passing through the data (least-norm solution)."""
+    def test_1d_smoother_gives_linear_at_large_lambda_order2(self):
+        """At very large lambda (order=2), the smoother converges to the
+        best-fit linear function (second differences penalised to zero)."""
         n = 20
         x = np.arange(n, dtype=float)
-        # True quadratic: y = 1 + 0.5x - 0.02x^2
+        # Noisy quadratic input
         y = 1.0 + 0.5 * x - 0.02 * x**2
         wh = WhittakerHenderson1D(order=2)
         result = wh.fit(x, y, lambda_=1e10)
-        np.testing.assert_allclose(result.fitted, y, atol=1e-4)
+        # Second differences should be near zero (linear fit)
+        second_diffs = np.diff(result.fitted, n=2)
+        assert np.max(np.abs(second_diffs)) < 1e-3
 
     def test_uniform_weights_vs_no_weights(self):
         """Uniform weights of 1 should give same result as no weights."""
