@@ -243,3 +243,11 @@ Found it useful? A [GitHub star](https://github.com/burning-cost/insurance-whitt
 ## Licence
 
 BSD-3-Clause
+
+## Related Libraries
+
+| Library | Description |
+|---------|-------------|
+| [`insurance-gam`](https://github.com/burning-cost/insurance-gam) | GAM and EBM models — non-linear tariff functions that share the smoothing philosophy of Whittaker-Henderson |
+| [`insurance-glm-tools`](https://github.com/burning-cost/insurance-glm-tools) | GLM territory banding and embeddings — use smoothed 1D curves as input to factor banding |
+| [`insurance-credibility`](https://github.com/burning-cost/insurance-credibility) | Bühlmann-Straub credibility — Whittaker smoothing across cells, credibility smoothing across segments |
