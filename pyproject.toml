@@ -1,16 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "insurance-whittaker"
-version = "0.1.4"
-description = "Whittaker-Henderson smoothing for insurance pricing and actuarial rating tables: 1D and 2D graduation with automatic lambda selection"
+version = "0.1.5"
+description = "Whittaker-Henderson smoothing for insurance pricing and actuarial rating tables: 1D and 2D graduation with automatic lambda selection via cross-validation."
 readme = "README.md"
 authors = [
     { name = "Burning Cost", email = "pricing.frontier@gmail.com" }
 ]
 requires-python = ">=3.10"
 license = "MIT"
-keywords = ["insurance", "actuarial", "smoothing", "whittaker-henderson", "pricing", "graduation", "rating tables"]
+keywords = [
+    "insurance",
+    "actuarial",
+    "smoothing",
+    "whittaker",
+    "whittaker-henderson",
+    "henderson",
+    "graduation",
+    "rating tables",
+    "pricing",
+    "UK",
+    "personal lines",
+    "age graduation",
+    "2D smoothing",
+    "cross-validation",
+    "penalized regression",
+    "spline",
+    "experience rating",
+    "claims experience",
+    "loss development",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -33,15 +57,11 @@ plot = ["matplotlib>=3.7"]
 dev = ["pytest>=7.0", "pytest-cov", "pdoc>=14.0.0"]
 
 [project.urls]
-Homepage = "https://burning-cost.github.io/"
+Homepage = "https://burning-cost.github.io/libraries/insurance-whittaker/"
+Documentation = "https://burning-cost.github.io/libraries/insurance-whittaker/"
 Repository = "https://github.com/burning-cost/insurance-whittaker"
-Changelog = "https://github.com/burning-cost/insurance-whittaker/releases"
-Documentation = "https://burning-cost.github.io/insurance-whittaker"
 "Bug Tracker" = "https://github.com/burning-cost/insurance-whittaker/issues"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+Changelog = "https://github.com/burning-cost/insurance-whittaker/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/insurance_whittaker"]
